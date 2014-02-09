@@ -90,9 +90,12 @@ impl Obj
     fn parse_group(&mut self, group: &str) -> uint
     {
         let mut group_split = group.rsplit('/');
-        let v: uint = FromStr::from_str(group_split.next().unwrap()).unwrap();
-        let t: uint = FromStr::from_str(group_split.next().unwrap()).unwrap();
-        let n: uint = FromStr::from_str(group_split.next().unwrap()).unwrap();
+        let v = group_split.next();
+        let t = group_split.next();
+        let n = group_split.next();
+        let v: uint = FromStr::from_str(v.unwrap()).unwrap();
+        let t: uint = FromStr::from_str(t.unwrap()).unwrap();
+        let n: uint = FromStr::from_str(n.unwrap()).unwrap();
 
         let vg = (v, t, n);
         match self.joined_vertices_map.find(&vg) {
@@ -168,7 +171,9 @@ impl Obj
                         Some((name, start, len)) => {
                             group = Some((name, start, len+size));
                         }
-                        None => ()
+                        None => {
+                            group = Some((~"default", dat.indices.len()-size, size))
+                        }
                     }
                 },
                 Some("g") => {
@@ -187,6 +192,7 @@ impl Obj
                         None => ()
                     }
                 },
+                Some("mtllib") | Some("usemtl") => (),
                 Some(other) => {
                     if other.len() != 0 && other[0] != "#"[0] {
                         fail!("Invalid token {}", other);
