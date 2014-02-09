@@ -3,6 +3,9 @@
 #[crate_type = "lib"];
 #[comment = "An asset loader for snowmew"];
 
-pub use obj::ObjLoader;
+extern mod snowmew;
+extern mod cgmath;
+
+pub use obj::Obj;
 
 mod obj;

@@ -1,11 +1,11 @@
 extern mod loader = "snowmew-loader";
 
-use loader::ObjLoader;
+use loader::Obj;
 
 #[test]
 fn load_teapot()
 {
-    let teapot = ObjLoader::load(&Path::new("assets/teapot.obj"));
+    let teapot = Obj::load(&Path::new("assets/teapot.obj"));
 
     assert!(teapot.is_some());
 

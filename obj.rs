@@ -2,14 +2,18 @@
 use std::io::BufferedReader;
 use std::io::{File, Open, Read};
 use std::path::Path;
-
 use std::hashmap::HashMap;
 
-pub struct ObjLoader
+use snowmew;
+use snowmew::geometry::{VertexGetTexNorm, Geometry};
+
+use cgmath::vector::{Vec3, Vec2};
+
+pub struct Obj
 {
-    vertices: ~[(f32, f32, f32)],
-    textures: ~[(f32, f32)],
-    normals: ~[(f32, f32, f32)],
+    vertices: ~[Vec3<f32>],
+    textures: ~[Vec2<f32>],
+    normals: ~[Vec3<f32>],
     joined_vertices: ~[(uint, uint, uint)],
     joined_vertices_map: HashMap<(uint, uint, uint), uint>,
     indices: ~[uint],
@@ -17,11 +21,11 @@ pub struct ObjLoader
 
 }
 
-impl ObjLoader
+impl Obj
 {
-    fn new() -> ObjLoader
+    fn new() -> Obj
     {
-        ObjLoader {
+        Obj {
             vertices: ~[],
             textures: ~[],
             normals: ~[],
@@ -41,7 +45,7 @@ impl ObjLoader
             }
         };
         let vertex = match (FromStr::from_str(v0), FromStr::from_str(v1), FromStr::from_str(v2)) {
-            (Some(v0), Some(v1), Some(v2)) => (v0, v1, v2),
+            (Some(v0), Some(v1), Some(v2)) => Vec3::new(v0, v1, v2),
             _ => {
                 fail!("could not parse line {} {} {}", v0, v1, v2);
             }
@@ -58,7 +62,7 @@ impl ObjLoader
             }
         };
         let texture = match (FromStr::from_str(t0), FromStr::from_str(t1)) {
-            (Some(t0), Some(t1)) => (t0, t1),
+            (Some(t0), Some(t1)) => Vec2::new(t0, t1),
             _ => {
                 fail!("could not parse line {} {}", t0, t1);
             }
@@ -75,7 +79,7 @@ impl ObjLoader
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
-            (Some(n0), Some(n1), Some(n2)) => (n0, n1, n2),
+            (Some(n0), Some(n1), Some(n2)) => Vec3::new(n0, n1, n2),
             _ => {
                 fail!("could not parse line {} {} {}", n0, n1, n2);
             }
@@ -125,9 +129,9 @@ impl ObjLoader
         }
     }
 
-    pub fn load(path: &Path) -> Option<ObjLoader>
+    pub fn load(path: &Path) -> Option<Obj>
     {
-        let mut dat = ObjLoader::new();
+        let mut dat = Obj::new();
 
         let mut file = match File::open_mode(path, Open, Read) {
             Ok(file) => BufferedReader::new(file),
@@ -198,5 +202,35 @@ impl ObjLoader
         }
 
         Some(dat)
+    }
+
+    pub fn import(&self, parent: snowmew::object_key, db: &mut snowmew::Database)
+    {
+        // build vertex buffer
+        let mut vertices = ~[];
+        for &(v, t, n) in self.joined_vertices.iter() {
+            let v = self.vertices[v-1];
+            let t = self.textures[t-1];
+            let n = self.normals[n-1];
+
+            vertices.push( VertexGetTexNorm {
+                position: v,
+                texture: t,
+                normal: n
+            });
+
+        }
+
+        let mut indices = ~[];
+        for i in self.indices.iter() {
+            indices.push(*i as u32);
+        }
+
+        let vb = snowmew::VertexBuffer::new_position_texture_normal(vertices, indices);
+        let vbo = db.add_vertex_buffer(parent, ~"vbo", vb);
+
+        for &(ref name, start, len) in self.objects.iter() {
+            db.add_geometry(parent, name.clone(), Geometry::triangles(vbo, start, len));
+        }
     }
 }
