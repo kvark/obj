@@ -1,4 +1,4 @@
-extern mod loader = "snowmew-loader";
+extern crate loader = "snowmew-loader";
 
 use loader::Obj;
 

@@ -3,8 +3,8 @@
 #[crate_type = "lib"];
 #[comment = "An asset loader for snowmew"];
 
-extern mod snowmew;
-extern mod cgmath;
+extern crate snowmew;
+extern crate cgmath;
 
 pub use obj::Obj;
 
