@@ -233,7 +233,7 @@ impl Obj
         }
 
         let vb = snowmew::VertexBuffer::new_position_texture_normal(vertices, indices);
-        let vbo = db.new_vertex_buffer(parent, ~"vbo", vb);
+        let vbo = db.new_vertex_buffer(parent, "vbo", vb);
 
         for &(ref name, start, len) in self.objects.iter() {
             db.new_geometry(parent, name.clone(), Geometry::triangles(vbo, start, len));
