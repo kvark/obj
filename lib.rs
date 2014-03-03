@@ -5,6 +5,7 @@
 
 extern crate snowmew;
 extern crate cgmath;
+extern crate collections;
 
 pub use obj::Obj;
 

@@ -2,7 +2,9 @@
 use std::io::BufferedReader;
 use std::io::{File, Open, Read};
 use std::path::Path;
-use std::hashmap::HashMap;
+use std::from_str::FromStr;
+
+use collections::HashMap;
 
 use snowmew;
 use snowmew::geometry::{VertexGetTexNorm, Geometry};
