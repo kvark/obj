@@ -91,7 +91,7 @@ impl Obj
 
     fn parse_group(&mut self, group: &str) -> uint
     {
-        let mut group_split = group.rsplit('/');
+        let mut group_split = group.split('/');
         let v = group_split.next();
         let t = group_split.next();
         let n = group_split.next();
@@ -178,7 +178,7 @@ impl Obj
                         }
                     }
                 },
-                Some("g") => {
+                Some("o") | Some("g") => {
                     match group {
                         Some(val) => {
                             group = None;
@@ -194,10 +194,10 @@ impl Obj
                         None => ()
                     }
                 },
-                Some("mtllib") | Some("usemtl") => (),
+                Some("mtllib") | Some("usemtl") | Some("s") => (),
                 Some(other) => {
                     if other.len() != 0 && other[0] != "#"[0] {
-                        fail!("Invalid token {}", other);
+                        fail!("Invalid token {} {:?}", other, words.next());
                     }
                 }
                 None => (),
