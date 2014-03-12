@@ -214,6 +214,14 @@ impl Obj
 
     pub fn import(&self, parent: snowmew::object_key, db: &mut snowmew::Database)
     {
+        println!("v {} t {} n {} i {} ix {}\n",
+            self.vertices.len(),
+            self.textures.len(),
+            self.normals.len(),
+            self.joined_vertices.len(),
+            self.joined_vertices_map.len()
+        );
+
         // build vertex buffer
         let mut vertices = ~[];
         for &(v, t, n) in self.joined_vertices.iter() {
