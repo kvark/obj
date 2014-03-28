@@ -149,7 +149,10 @@ impl Obj
         let mut group: Option<(~str, uint, uint)> = None;
 
         for line in file.lines() {
-            let mut words = line.words();
+            let mut words = match line {
+                Ok(ref line) => line.words(),
+                Err(err) => fail!("failed to readline {:?}", err)
+            };
             let first = words.next();
 
             match first {
@@ -189,6 +192,7 @@ impl Obj
 
                     match words.next() {
                         Some(name) => {
+                            println!("Object {:s}", name);
                             group = Some((name.to_owned(), dat.indices.len(), 0))
                         },
                         None => ()
@@ -245,8 +249,10 @@ impl Obj
         let vb = snowmew::VertexBuffer::new_position_texture_normal(vertices, indices);
         let vbo = db.new_vertex_buffer(parent, "vbo", vb);
 
+        let geometry = db.add_dir(Some(parent), "geometry");
+
         for &(ref name, start, len) in self.objects.iter() {
-            db.new_geometry(parent, name.clone(), Geometry::triangles(vbo, start, len));
+            db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
         }
     }
 }
