@@ -216,7 +216,7 @@ impl Obj
         Some(dat)
     }
 
-    pub fn import(&self, parent: snowmew::object_key, db: &mut snowmew::Database)
+    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut snowmew::Database)
     {
         println!("v {} t {} n {} i {} ix {}\n",
             self.vertices.len(),
