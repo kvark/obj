@@ -13,13 +13,13 @@ use cgmath::vector::{Vec3, Vec2};
 
 pub struct Obj
 {
-    vertices: ~[Vec3<f32>],
-    textures: ~[Vec2<f32>],
-    normals: ~[Vec3<f32>],
-    joined_vertices: ~[(uint, uint, uint)],
-    joined_vertices_map: HashMap<(uint, uint, uint), uint>,
-    indices: ~[uint],
-    objects: ~[(~str, uint, uint)]
+    pub vertices: ~[Vec3<f32>],
+    pub textures: ~[Vec2<f32>],
+    pub normals: ~[Vec3<f32>],
+    pub joined_vertices: ~[(uint, uint, uint)],
+    pub joined_vertices_map: HashMap<(uint, uint, uint), uint>,
+    pub indices: ~[uint],
+    pub objects: ~[(~str, uint, uint)]
 
 }
 
