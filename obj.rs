@@ -7,6 +7,7 @@ use std::from_str::FromStr;
 use collections::HashMap;
 
 use snowmew;
+use snowmew::core::Common;
 use snowmew::geometry::{VertexGetTexNorm, Geometry};
 
 use cgmath::vector::{Vec3, Vec2};
@@ -216,7 +217,7 @@ impl Obj
         Some(dat)
     }
 
-    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut snowmew::Database)
+    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut snowmew::graphics::Graphics)
     {
         println!("v {} t {} n {} i {} ix {}\n",
             self.vertices.len(),
