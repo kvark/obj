@@ -14,13 +14,13 @@ use cgmath::vector::{Vec3, Vec2};
 
 pub struct Obj
 {
-    pub vertices: ~[Vec3<f32>],
-    pub textures: ~[Vec2<f32>],
-    pub normals: ~[Vec3<f32>],
-    pub joined_vertices: ~[(uint, uint, uint)],
+    pub vertices: Vec<Vec3<f32>>,
+    pub textures: Vec<Vec2<f32>>,
+    pub normals: Vec<Vec3<f32>>,
+    pub joined_vertices: Vec<(uint, uint, uint)>,
     pub joined_vertices_map: HashMap<(uint, uint, uint), uint>,
-    pub indices: ~[uint],
-    pub objects: ~[(~str, uint, uint)]
+    pub indices: Vec<uint>,
+    pub objects: Vec<(~str, uint, uint)>
 
 }
 
@@ -29,13 +29,13 @@ impl Obj
     fn new() -> Obj
     {
         Obj {
-            vertices: ~[],
-            textures: ~[],
-            normals: ~[],
-            joined_vertices: ~[],
+            vertices: Vec::new(),
+            textures: Vec::new(),
+            normals: Vec::new(),
+            joined_vertices: Vec::new(),
             joined_vertices_map: HashMap::new(),
-            indices: ~[],
-            objects: ~[]
+            indices: Vec::new(),
+            objects: Vec::new()
         }
     }
 
@@ -228,11 +228,11 @@ impl Obj
         );
 
         // build vertex buffer
-        let mut vertices = ~[];
+        let mut vertices = Vec::new();
         for &(v, t, n) in self.joined_vertices.iter() {
-            let v = self.vertices[v-1];
-            let t = self.textures[t-1];
-            let n = self.normals[n-1];
+            let v = *self.vertices.get(v-1);
+            let t = *self.textures.get(t-1);
+            let n = *self.normals.get(n-1);
 
             vertices.push( VertexGetTexNorm {
                 position: v,
@@ -242,7 +242,7 @@ impl Obj
 
         }
 
-        let mut indices = ~[];
+        let mut indices = Vec::new();
         for i in self.indices.iter() {
             indices.push(*i as u32);
         }
