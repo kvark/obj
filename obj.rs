@@ -8,7 +8,8 @@ use collections::HashMap;
 
 use snowmew;
 use snowmew::common::Common;
-use snowmew::geometry::{VertexGetTexNorm, Geometry};
+use graphics;
+use graphics::geometry::{VertexGetTexNorm, Geometry};
 
 use cgmath::vector::{Vector3, Vector2};
 
@@ -217,7 +218,7 @@ impl Obj
         Some(dat)
     }
 
-    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut snowmew::graphics::Graphics)
+    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
     {
         println!("v {} t {} n {} i {} ix {}\n",
             self.vertices.len(),
@@ -247,7 +248,7 @@ impl Obj
             indices.push(*i as u32);
         }
 
-        let vb = snowmew::VertexBuffer::new_position_texture_normal(vertices, indices);
+        let vb = graphics::VertexBuffer::new_position_texture_normal(vertices, indices);
         let vbo = db.new_vertex_buffer(parent, "vbo", vb);
 
         let geometry = db.add_dir(Some(parent), "geometry");
