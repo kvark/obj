@@ -10,13 +10,13 @@ use snowmew;
 use snowmew::core::Common;
 use snowmew::geometry::{VertexGetTexNorm, Geometry};
 
-use cgmath::vector::{Vec3, Vec2};
+use cgmath::vector::{Vector3, Vector2};
 
 pub struct Obj
 {
-    pub vertices: Vec<Vec3<f32>>,
-    pub textures: Vec<Vec2<f32>>,
-    pub normals: Vec<Vec3<f32>>,
+    pub vertices: Vec<Vector3<f32>>,
+    pub textures: Vec<Vector2<f32>>,
+    pub normals: Vec<Vector3<f32>>,
     pub joined_vertices: Vec<(uint, uint, uint)>,
     pub joined_vertices_map: HashMap<(uint, uint, uint), uint>,
     pub indices: Vec<uint>,
@@ -48,7 +48,7 @@ impl Obj
             }
         };
         let vertex = match (FromStr::from_str(v0), FromStr::from_str(v1), FromStr::from_str(v2)) {
-            (Some(v0), Some(v1), Some(v2)) => Vec3::new(v0, v1, v2),
+            (Some(v0), Some(v1), Some(v2)) => Vector3::new(v0, v1, v2),
             _ => {
                 fail!("could not parse line {} {} {}", v0, v1, v2);
             }
@@ -65,7 +65,7 @@ impl Obj
             }
         };
         let texture = match (FromStr::from_str(t0), FromStr::from_str(t1)) {
-            (Some(t0), Some(t1)) => Vec2::new(t0, t1),
+            (Some(t0), Some(t1)) => Vector2::new(t0, t1),
             _ => {
                 fail!("could not parse line {} {}", t0, t1);
             }
@@ -82,7 +82,7 @@ impl Obj
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
-            (Some(n0), Some(n1), Some(n2)) => Vec3::new(n0, n1, n2),
+            (Some(n0), Some(n1), Some(n2)) => Vector3::new(n0, n1, n2),
             _ => {
                 fail!("could not parse line {} {} {}", n0, n1, n2);
             }
@@ -178,7 +178,7 @@ impl Obj
                             group = Some((name, start, len+size));
                         }
                         None => {
-                            group = Some((~"default", dat.indices.len()-size, size))
+                            group = Some(("default".to_owned(), dat.indices.len()-size, size))
                         }
                     }
                 },
