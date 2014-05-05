@@ -7,7 +7,7 @@ use std::from_str::FromStr;
 use collections::HashMap;
 
 use snowmew;
-use snowmew::core::Common;
+use snowmew::common::Common;
 use snowmew::geometry::{VertexGetTexNorm, Geometry};
 
 use cgmath::vector::{Vector3, Vector2};
