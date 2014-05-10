@@ -13,8 +13,7 @@ use graphics::geometry::{VertexGetTexNorm, Geometry};
 
 use cgmath::vector::{Vector3, Vector2};
 
-pub struct Obj
-{
+pub struct Obj {
     pub vertices: Vec<Vector3<f32>>,
     pub textures: Vec<Vector2<f32>>,
     pub normals: Vec<Vector3<f32>>,
@@ -22,13 +21,10 @@ pub struct Obj
     pub joined_vertices_map: HashMap<(uint, uint, uint), uint>,
     pub indices: Vec<uint>,
     pub objects: Vec<(~str, uint, uint)>
-
 }
 
-impl Obj
-{
-    fn new() -> Obj
-    {
+impl Obj {
+    fn new() -> Obj {
         Obj {
             vertices: Vec::new(),
             textures: Vec::new(),
@@ -40,8 +36,7 @@ impl Obj
         }
     }
 
-    fn parse_vertex(&mut self, v0: Option<&str>, v1: Option<&str>, v2: Option<&str>)
-    {
+    fn parse_vertex(&mut self, v0: Option<&str>, v1: Option<&str>, v2: Option<&str>) {
         let (v0, v1, v2) = match (v0, v1, v2) {
             (Some(v0), Some(v1), Some(v2)) => (v0, v1, v2),
             _ => {
@@ -57,8 +52,7 @@ impl Obj
         self.vertices.push(vertex);
     }
 
-    fn parse_texture(&mut self, t0: Option<&str>, t1: Option<&str>)
-    {
+    fn parse_texture(&mut self, t0: Option<&str>, t1: Option<&str>) {
         let (t0, t1) = match (t0, t1) {
             (Some(t0), Some(t1)) => (t0, t1),
             _ => {
@@ -74,8 +68,7 @@ impl Obj
         self.textures.push(texture);
     }
 
-    fn parse_normal(&mut self, n0: Option<&str>, n1: Option<&str>, n2: Option<&str>)
-    {
+    fn parse_normal(&mut self, n0: Option<&str>, n1: Option<&str>, n2: Option<&str>) {
         let (n0, n1, n2) = match (n0, n1, n2) {
             (Some(n0), Some(n1), Some(n2)) => (n0, n1, n2),
             _ => {
@@ -91,8 +84,7 @@ impl Obj
         self.normals.push(normal);
     }
 
-    fn parse_group(&mut self, group: &str) -> uint
-    {
+    fn parse_group(&mut self, group: &str) -> uint {
         let mut group_split = group.split('/');
         let v = group_split.next();
         let t = group_split.next();
@@ -115,8 +107,7 @@ impl Obj
         }
     }
 
-    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) -> uint
-    {
+    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) -> uint {
         let g0 = self.parse_group(g0);
         let g1 = self.parse_group(g1);
         let g2 = self.parse_group(g2);
@@ -128,16 +119,14 @@ impl Obj
         3
     }
 
-    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) -> uint
-    {
+    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) -> uint {
         match (g0, g1, g2, g3) {
             (Some(g0), Some(g1), Some(g2), None) => self.parse_triangle(g0, g1, g2),
             _ => {fail!("Unsupported");}
         }
     }
 
-    pub fn load(path: &Path) -> Option<Obj>
-    {
+    pub fn load(path: &Path) -> Option<Obj> {
         let mut dat = Obj::new();
 
         let mut file = match File::open_mode(path, Open, Read) {
@@ -218,8 +207,7 @@ impl Obj
         Some(dat)
     }
 
-    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
-    {
+    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) {
         println!("v {} t {} n {} i {} ix {}\n",
             self.vertices.len(),
             self.textures.len(),

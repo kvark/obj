@@ -3,8 +3,7 @@ extern crate loader = "snowmew-loader";
 use loader::Obj;
 
 #[test]
-fn load_teapot()
-{
+fn load_teapot() {
     let teapot = Obj::load(&Path::new("assets/suzanne.obj"));
 
     assert!(teapot.is_some());
