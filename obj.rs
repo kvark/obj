@@ -9,18 +9,35 @@ use collections::HashMap;
 use snowmew;
 use snowmew::common::Common;
 use graphics;
-use graphics::geometry::{VertexGetTexNorm, Geometry};
+use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNorm, Geometry};
 
 use cgmath::vector::{Vector3, Vector2};
 
+#[deriving(Eq)]
+enum VertexType {
+    VertexP,
+    VertexPT,
+    VertexPN,
+    VertexPTN,
+}
+
 pub struct Obj {
-    pub vertices: Vec<Vector3<f32>>,
-    pub textures: Vec<Vector2<f32>>,
-    pub normals: Vec<Vector3<f32>>,
-    pub joined_vertices: Vec<(uint, uint, uint)>,
-    pub joined_vertices_map: HashMap<(uint, uint, uint), uint>,
-    pub indices: Vec<uint>,
-    pub objects: Vec<(~str, uint, uint)>
+    vertices: Vec<Vector3<f32>>,
+    textures: Vec<Vector2<f32>>,
+    normals: Vec<Vector3<f32>>,
+    joined_vertices_map_p: HashMap<uint, uint>,
+    joined_vertices_map_pn: HashMap<(uint, uint), uint>,
+    joined_vertices_map_pt: HashMap<(uint, uint), uint>,
+    joined_vertices_map_ptn: HashMap<(uint, uint, uint), uint>,
+    joined_vertices_p: Vec<uint>,
+    joined_vertices_pn: Vec<(uint, uint)>,
+    joined_vertices_pt: Vec<(uint, uint)>,
+    joined_vertices_ptn: Vec<(uint, uint, uint)>,
+    indices_p: Vec<uint>,
+    indices_pn: Vec<uint>,
+    indices_pt: Vec<uint>,
+    indices_ptn: Vec<uint>,
+    objects: Vec<(~str, uint, uint, VertexType)>
 }
 
 impl Obj {
@@ -29,9 +46,18 @@ impl Obj {
             vertices: Vec::new(),
             textures: Vec::new(),
             normals: Vec::new(),
-            joined_vertices: Vec::new(),
-            joined_vertices_map: HashMap::new(),
-            indices: Vec::new(),
+            joined_vertices_p: Vec::new(),
+            joined_vertices_pn: Vec::new(),
+            joined_vertices_pt: Vec::new(),
+            joined_vertices_ptn: Vec::new(),
+            joined_vertices_map_p: HashMap::new(),
+            joined_vertices_map_pn: HashMap::new(),
+            joined_vertices_map_pt: HashMap::new(),
+            joined_vertices_map_ptn: HashMap::new(),
+            indices_p: Vec::new(),
+            indices_pn: Vec::new(),
+            indices_pt: Vec::new(),
+            indices_ptn: Vec::new(),
             objects: Vec::new()
         }
     }
@@ -84,44 +110,147 @@ impl Obj {
         self.normals.push(normal);
     }
 
-    fn parse_group(&mut self, group: &str) -> uint {
-        let mut group_split = group.split('/');
-        let v = group_split.next();
-        let t = group_split.next();
-        let n = group_split.next();
-        let v: uint = FromStr::from_str(v.unwrap()).unwrap();
-        let t: uint = FromStr::from_str(t.unwrap()).unwrap();
-        let n: uint = FromStr::from_str(n.unwrap()).unwrap();
-
-        let vg = (v, t, n);
-        match self.joined_vertices_map.find(&vg) {
+    fn parse_group_p(&mut self, p: &str) -> uint {
+        let p: uint = FromStr::from_str(p).expect("Invalid number");
+        match self.joined_vertices_map_p.find(&p) {
             Some(&idx) => {
                 return idx;
             },
             None => {
-                let len = self.joined_vertices.len();
-                self.joined_vertices_map.insert(vg, len);
-                self.joined_vertices.push(vg);
+                let len = self.joined_vertices_p.len();
+                self.joined_vertices_map_p.insert(p, len);
+                self.joined_vertices_p.push(p);
                 return len;
             }
         }
     }
 
-    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) -> uint {
-        let g0 = self.parse_group(g0);
-        let g1 = self.parse_group(g1);
-        let g2 = self.parse_group(g2);
+    fn parse_group_pt(&mut self, p: &str, t: &str) -> uint {
+        let p: uint = FromStr::from_str(p).expect("Invalid number");
+        let t: uint = FromStr::from_str(t).expect("Invalid number");
 
-        self.indices.push(g0);
-        self.indices.push(g1);
-        self.indices.push(g2);
-
-        3
+        let pt = (p, t);
+        match self.joined_vertices_map_pt.find(&pt) {
+            Some(&idx) => {
+                return idx;
+            },
+            None => {
+                let len = self.joined_vertices_pt.len();
+                self.joined_vertices_map_pt.insert(pt, len);
+                self.joined_vertices_pt.push(pt);
+                return len;
+            }
+        }
     }
 
-    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) -> uint {
+    fn parse_group_pn(&mut self, p: &str, n: &str) -> uint {
+        let p: uint = FromStr::from_str(p).expect("Invalid number");
+        let n: uint = FromStr::from_str(n).expect("Invalid number");
+
+        let pn = (p, n);
+        match self.joined_vertices_map_pn.find(&pn) {
+            Some(&idx) => {
+                return idx;
+            },
+            None => {
+                let len = self.joined_vertices_pn.len();
+                self.joined_vertices_map_pn.insert(pn, len);
+                self.joined_vertices_pn.push(pn);
+                return len;
+            }
+        }
+    }
+
+    fn parse_group_ptn(&mut self, p: &str, t: &str, n: &str) -> uint {
+        let p: uint = FromStr::from_str(p).expect("Invalid number");
+        let t: uint = FromStr::from_str(t).expect("Invalid number");
+        let n: uint = FromStr::from_str(n).expect("Invalid number");
+
+        let ptn = (p, t, n);
+        match self.joined_vertices_map_ptn.find(&ptn) {
+            Some(&idx) => {
+                return idx;
+            },
+            None => {
+                let len = self.joined_vertices_ptn.len();
+                self.joined_vertices_map_ptn.insert(ptn, len);
+                self.joined_vertices_ptn.push(ptn);
+                return len;
+            }
+        }
+    }
+
+    fn parse_group(&mut self, group: &str) -> (VertexType, uint) {
+        let mut group_split = group.split('/');
+        let p = group_split.next();
+        let t = group_split.next();
+        let n = group_split.next();
+
+        match (p, t, n) {
+            (Some(p), None, None) => {
+                (VertexP, self.parse_group_p(p))
+            }
+            (Some(p), Some(t), None) => {
+                (VertexPT, self.parse_group_pt(p, t))
+            }
+            (Some(p), None, Some(n)) => {
+                (VertexPN, self.parse_group_pn(p, n))
+            }
+            (Some(p), Some(t), Some(n)) => {
+                (VertexPTN, self.parse_group_ptn(p, t, n))
+            },
+            _ => fail!("poorly formed group {:s}", group)
+        }
+    }
+
+    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) -> (VertexType, uint, uint) {
+        let (t, g0) = self.parse_group(g0);
+        let (_, g1) = self.parse_group(g1);
+        let (_, g2) = self.parse_group(g2);
+
+        let indices = match t {
+            VertexP => &mut self.indices_p,
+            VertexPT => &mut self.indices_pt,
+            VertexPN => &mut self.indices_pn,
+            VertexPTN => &mut self.indices_ptn,
+        };
+
+        let start = indices.len();
+        indices.push(g0);
+        indices.push(g1);
+        indices.push(g2);
+
+        (t, start, 3)
+    }
+
+    fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str) -> (VertexType, uint, uint) {
+        let (t, g0) = self.parse_group(g0);
+        let (_, g1) = self.parse_group(g1);
+        let (_, g2) = self.parse_group(g2);
+        let (_, g3) = self.parse_group(g3);
+
+        let indices = match t {
+            VertexP => &mut self.indices_p,
+            VertexPT => &mut self.indices_pt,
+            VertexPN => &mut self.indices_pn,
+            VertexPTN => &mut self.indices_ptn,
+        };
+
+        let start = indices.len();
+        indices.push(g0);
+        indices.push(g1);
+        indices.push(g2);
+        indices.push(g2);
+        indices.push(g3);
+        indices.push(g0);
+
+        (t, start, 6)
+    }
+
+    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) -> (VertexType, uint, uint) {
         match (g0, g1, g2, g3) {
             (Some(g0), Some(g1), Some(g2), None) => self.parse_triangle(g0, g1, g2),
+            (Some(g0), Some(g1), Some(g2), Some(g3)) => self.parse_quad(g0, g1, g2, g3),
             _ => {fail!("Unsupported");}
         }
     }
@@ -137,7 +266,7 @@ impl Obj {
             }
         };
 
-        let mut group: Option<(~str, uint, uint)> = None;
+        let mut group: Option<(~str, uint, uint, VertexType)> = None;
 
         for line in file.lines() {
             let mut words = match line {
@@ -161,14 +290,18 @@ impl Obj {
                 },
                 Some("f") => {
                     let (g0, g1, g2, g3) = (words.next(), words.next(), words.next(), words.next());
-                    let size = dat.parse_face(g0, g1, g2, g3);
+                    let (vertex_type, start, size) = dat.parse_face(g0, g1, g2, g3);
 
                     match group {
-                        Some((name, start, len)) => {
-                            group = Some((name, start, len+size));
-                        }
                         None => {
-                            group = Some(("default".to_owned(), dat.indices.len()-size, size))
+                            group = Some(("default".to_owned(), start, size, vertex_type))
+                        }
+                        Some((name, 0, 0, _)) => {
+                            group = Some((name, start, size, vertex_type))
+                        }
+                        Some((name, start, len, vt)) => {
+                            assert!(vt == vertex_type);
+                            group = Some((name, start, len+size, vertex_type));
                         }
                     }
                 },
@@ -184,7 +317,7 @@ impl Obj {
                     match words.next() {
                         Some(name) => {
                             println!("Object {:s}", name);
-                            group = Some((name.to_owned(), dat.indices.len(), 0))
+                            group = Some((name.to_owned(), 0, 0, VertexP))
                         },
                         None => ()
                     }
@@ -208,40 +341,123 @@ impl Obj {
     }
 
     pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) {
-        println!("v {} t {} n {} i {} ix {}\n",
+        println!("v {} t {} n {}\n",
             self.vertices.len(),
             self.textures.len(),
-            self.normals.len(),
-            self.joined_vertices.len(),
-            self.joined_vertices_map.len()
+            self.normals.len()
         );
 
-        // build vertex buffer
-        let mut vertices = Vec::new();
-        for &(v, t, n) in self.joined_vertices.iter() {
-            let v = *self.vertices.get(v-1);
-            let t = *self.textures.get(t-1);
-            let n = *self.normals.get(n-1);
+        // build vertex buffer(s)
+        let vbo_p = if self.joined_vertices_p.len() != 0 {
+            println!("\tvbo_p i {} ix {}\n",
+                self.indices_p.len(),
+                self.joined_vertices_p.len(),
+            );
+            let mut vertices = Vec::new();
+            for p in self.joined_vertices_p.iter() {
+                let p = *self.vertices.get(p-1);
 
-            vertices.push( VertexGetTexNorm {
-                position: v,
-                texture: t,
-                normal: n
-            });
+                vertices.push( VertexGeo {
+                    position: p
+                });
+            }
 
-        }
+            let mut indices = Vec::new();
+            for i in self.indices_p.iter() {
+                indices.push(*i as u32);
+            }
 
-        let mut indices = Vec::new();
-        for i in self.indices.iter() {
-            indices.push(*i as u32);
-        }
+            let vb = graphics::VertexBuffer::new_position(vertices, indices);
+            Some(db.new_vertex_buffer(parent, "vbo_p", vb))
+        } else {None};
 
-        let vb = graphics::VertexBuffer::new_position_texture_normal(vertices, indices);
-        let vbo = db.new_vertex_buffer(parent, "vbo", vb);
+        let vbo_pt = if self.joined_vertices_pt.len() != 0 {
+            println!("\tvbo_pt i {} ix {}\n",
+                self.indices_pt.len(),
+                self.joined_vertices_pt.len(),
+            );
+            let mut vertices = Vec::new();
+            for &(p, t) in self.joined_vertices_pt.iter() {
+                let p = *self.vertices.get(p-1);
+                let t = *self.textures.get(t-1);
+
+                vertices.push( VertexGeoTex {
+                    position: p,
+                    texture: t,
+                });
+            }
+
+            let mut indices = Vec::new();
+            for i in self.indices_pt.iter() {
+                indices.push(*i as u32);
+            }
+
+            let vb = graphics::VertexBuffer::new_position_texture(vertices, indices);
+            Some(db.new_vertex_buffer(parent, "vbo_pt", vb))
+        } else {None};
+
+        let vbo_pn = if self.joined_vertices_pn.len() != 0 {
+            println!("\tvbo_pn i {} ix {}\n",
+                self.indices_pn.len(),
+                self.joined_vertices_pn.len(),
+            );
+            let mut vertices = Vec::new();
+            for &(p, n) in self.joined_vertices_pn.iter() {
+                let p = *self.vertices.get(p-1);
+                let n = *self.normals.get(n-1);
+
+                vertices.push( VertexGeoNorm {
+                    position: p,
+                    normal: n,
+                });
+            }
+
+            let mut indices = Vec::new();
+            for i in self.indices_pn.iter() {
+                indices.push(*i as u32);
+            }
+
+            let vb = graphics::VertexBuffer::new_position_normal(vertices, indices);
+            Some(db.new_vertex_buffer(parent, "vbo_pn", vb))
+        } else {None};
+
+        let vbo_ptn = if self.joined_vertices_ptn.len() != 0 {
+            println!("\tvbo_ptn i {} ix {}\n",
+                self.indices_ptn.len(),
+                self.joined_vertices_ptn.len(),
+            );
+            let mut vertices = Vec::new();
+            for &(p, t, n) in self.joined_vertices_ptn.iter() {
+                let p = *self.vertices.get(p-1);
+                let t = *self.textures.get(t-1);
+                let n = *self.normals.get(n-1);
+
+                vertices.push( VertexGeoTexNorm {
+                    position: p,
+                    texture: t,
+                    normal: n
+                });
+            }
+
+            let mut indices = Vec::new();
+            for i in self.indices_ptn.iter() {
+                indices.push(*i as u32);
+            }
+
+            let vb = graphics::VertexBuffer::new_position_texture_normal(vertices, indices);
+            Some(db.new_vertex_buffer(parent, "vbo_ptn", vb))
+        } else {None};
 
         let geometry = db.add_dir(Some(parent), "geometry");
 
-        for &(ref name, start, len) in self.objects.iter() {
+        for &(ref name, start, len, vt) in self.objects.iter() {
+            let vbo = match vt {
+                VertexP => vbo_p,
+                VertexPN => vbo_pn,
+                VertexPT => vbo_pt,
+                VertexPTN => vbo_ptn
+            };
+            let vbo = vbo.expect("vbo should have been created. Empty vertex buffer found");
             db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
         }
     }
