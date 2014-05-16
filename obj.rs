@@ -336,7 +336,7 @@ impl Obj {
                 Some("usemtl") => {
                     match group {
                         None => {}
-                        Some((name, mat, start, len, vt)) => {
+                        Some((name, _, start, len, vt)) => {
                             let mat = match  words.next() {
                                 Some(w) => Some(w.to_owned()),
                                 None => None
@@ -478,7 +478,7 @@ impl Obj {
 
         let mut name_to_id = HashMap::new();
 
-        let mat = db.new_object(Some(parent), "materials");
+        let parent = db.new_object(Some(parent), "materials");
         for m_dir in self.materials.iter() {
             for m in m_dir.materials.iter() {
                 let mut mat = graphics::Material::new();

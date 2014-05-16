@@ -6,14 +6,7 @@ use std::io::{File, Open, Read};
 use std::path::Path;
 use std::from_str::FromStr;
 
-use collections::HashMap;
-
-use snowmew;
-use snowmew::common::Common;
-use graphics;
-use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNorm, Geometry};
-
-use cgmath::vector::{Vector3, Vector2};
+use cgmath::vector::{Vector3};
 
 pub struct Material {
     pub name: ~str,
