@@ -105,7 +105,7 @@ pub fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
 }
 
 pub fn to_string<'a>(w: &mut Words<'a>) -> Option<~str> {
-    match w.next() {
+    match w.last() {
         Some(v) => Some(v.to_owned()),
         other => {
             println!("invalid {:?}", other);

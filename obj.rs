@@ -14,6 +14,7 @@ use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNor
 use cgmath::vector::{Vector3, Vector2};
 
 use mtl::Mtl;
+use texture::load_texture;
 
 #[deriving(Eq)]
 enum VertexType {
@@ -24,6 +25,7 @@ enum VertexType {
 }
 
 pub struct Obj {
+    path: Path,
     vertices: Vec<Vector3<f32>>,
     textures: Vec<Vector2<f32>>,
     normals: Vec<Vector3<f32>>,
@@ -46,6 +48,7 @@ pub struct Obj {
 impl Obj {
     fn new() -> Obj {
         Obj {
+            path: Path::new(""),
             vertices: Vec::new(),
             textures: Vec::new(),
             normals: Vec::new(),
@@ -270,6 +273,8 @@ impl Obj {
             }
         };
 
+        dat.path = path.clone();
+
         let mut group: Option<(~str, Option<~str>, uint, uint, Option<VertexType>)> = None;
 
         for line in file.lines() {
@@ -472,11 +477,45 @@ impl Obj {
         (vbo_p, vbo_pt, vbo_pn, vbo_ptn)
     }
 
+    fn write_textures(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
+            -> HashMap<~str, snowmew::ObjectKey> {
+        let parent = db.new_object(Some(parent), "textures");
+        let mut map = HashMap::new();
+        for m_dir in self.materials.iter() {
+            for m in m_dir.materials.iter() {
+                let text = &[&m.map_ka, &m.map_kd, &m.map_ks, &m.map_ke,
+                             &m.map_ns, &m.map_d, &m.map_bump, &m.map_refl];
+                for t in text.iter() {
+                    match *t {
+                        &None => (),
+                        &Some(ref t) => {
+                            let insert = map.find(t).is_none();
+                            if insert {
+                                let mut path = self.path.clone();
+                                drop(path.pop());
+                                let text = load_texture(&path.join(&Path::new(t.clone())));
+                                let id = db.new_texture(parent, t.clone(), text);
+                                map.insert(t.clone(), id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        map
+    }
 
-    fn write_materials(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
+    fn write_materials(&self,
+                       parent: snowmew::ObjectKey,
+                       db: &mut graphics::Graphics,
+                       text: &HashMap<~str, snowmew::ObjectKey>)
             -> HashMap<~str, snowmew::ObjectKey> {
 
         let mut name_to_id = HashMap::new();
+
+        let lookup = |name| {
+            *text.find(name).expect("texture not found")
+        };
 
         let parent = db.new_object(Some(parent), "materials");
         for m_dir in self.materials.iter() {
@@ -486,7 +525,10 @@ impl Obj {
                 if m.kd.is_some() { mat.set_Kd(*m.kd.as_ref().unwrap()); }
                 if m.ks.is_some() { mat.set_Ks(*m.ks.as_ref().unwrap()); }
                 if m.ke.is_some() { mat.set_Ke(*m.ke.as_ref().unwrap()); }
-
+                if m.map_ka.is_some() { mat.set_map_Ka(lookup(m.map_ka.as_ref().unwrap())); }
+                if m.map_kd.is_some() { mat.set_map_Kd(lookup(m.map_kd.as_ref().unwrap())); }
+                if m.map_ks.is_some() { mat.set_map_Ks(lookup(m.map_ks.as_ref().unwrap())); }
+                if m.map_ke.is_some() { mat.set_map_Ke(lookup(m.map_ke.as_ref().unwrap())); }
                 let id = db.new_material(parent, m.name, mat);
                 name_to_id.insert(m.name.clone(), id);
             }
@@ -503,7 +545,8 @@ impl Obj {
             self.normals.len()
         );
 
-        let materials = self.write_materials(parent, db);
+        let textures = self.write_textures(parent, db);
+        let materials = self.write_materials(parent, db, &textures);
         let (vbo_p, vbo_pt, vbo_pn, vbo_ptn) = self.write_vbo(parent, db);
         let geometry = db.add_dir(Some(parent), "geometry");
         let objects = db.add_dir(Some(parent), "objects");
@@ -530,8 +573,6 @@ impl Obj {
             }
 
         }
-
-
 
     }
 }
