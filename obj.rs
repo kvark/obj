@@ -39,7 +39,7 @@ pub struct Obj {
     indices_pn: Vec<uint>,
     indices_pt: Vec<uint>,
     indices_ptn: Vec<uint>,
-    objects: Vec<(~str, Option<~str>, uint, uint, VertexType)>,
+    objects: Vec<(~str, Option<~str>, uint, uint, Option<VertexType>)>,
     materials: Vec<Mtl>
 }
 
@@ -270,7 +270,7 @@ impl Obj {
             }
         };
 
-        let mut group: Option<(~str, Option<~str>, uint, uint, VertexType)> = None;
+        let mut group: Option<(~str, Option<~str>, uint, uint, Option<VertexType>)> = None;
 
         for line in file.lines() {
             let mut words = match line {
@@ -298,14 +298,14 @@ impl Obj {
 
                     match group {
                         None => {
-                            group = Some(("default".to_owned(), None, start, size, vertex_type))
+                            group = Some(("default".to_owned(), None, start, size, None))
                         }
                         Some((name, mat, 0, 0, _)) => {
-                            group = Some((name, mat, start, size, vertex_type))
+                            group = Some((name, mat, start, size, Some(vertex_type)))
                         }
                         Some((name, mat, start, len, vt)) => {
-                            assert!(vt == vertex_type);
-                            group = Some((name, mat, start, len+size, vertex_type));
+                            assert!(vt == Some(vertex_type));
+                            group = Some((name, mat, start, len+size, Some(vertex_type)));
                         }
                     }
                 },
@@ -321,7 +321,7 @@ impl Obj {
                     match words.next() {
                         Some(name) => {
                             println!("Object {:s}", name);
-                            group = Some((name.to_owned(), None, 0, 0, VertexP))
+                            group = Some((name.to_owned(), None, 0, 0, Some(VertexP)))
                         },
                         None => ()
                     }
@@ -370,7 +370,7 @@ impl Obj {
         let parent = db.new_object(Some(parent), "vertex_buffers");
 
         let vbo_p = if self.joined_vertices_p.len() != 0 {
-            println!("\tvbo_p i {} ix {}\n",
+            println!("\tvbo_p i {} ix {}",
                 self.indices_p.len(),
                 self.joined_vertices_p.len(),
             );
@@ -393,7 +393,7 @@ impl Obj {
         } else {None};
 
         let vbo_pt = if self.joined_vertices_pt.len() != 0 {
-            println!("\tvbo_pt i {} ix {}\n",
+            println!("\tvbo_pt i {} ix {}",
                 self.indices_pt.len(),
                 self.joined_vertices_pt.len(),
             );
@@ -418,7 +418,7 @@ impl Obj {
         } else {None};
 
         let vbo_pn = if self.joined_vertices_pn.len() != 0 {
-            println!("\tvbo_pn i {} ix {}\n",
+            println!("\tvbo_pn i {} ix {}",
                 self.indices_pn.len(),
                 self.joined_vertices_pn.len(),
             );
@@ -443,7 +443,7 @@ impl Obj {
         } else {None};
 
         let vbo_ptn = if self.joined_vertices_ptn.len() != 0 {
-            println!("\tvbo_ptn i {} ix {}\n",
+            println!("\tvbo_ptn i {} ix {}",
                 self.indices_ptn.len(),
                 self.joined_vertices_ptn.len(),
             );
@@ -497,7 +497,7 @@ impl Obj {
 
 
     pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) {
-        println!("v {} t {} n {}\n",
+        println!("v {} t {} n {}",
             self.vertices.len(),
             self.textures.len(),
             self.normals.len()
@@ -509,20 +509,26 @@ impl Obj {
         let objects = db.add_dir(Some(parent), "objects");
         for &(ref name, ref mat, start, len, vt) in self.objects.iter() {
             let vbo = match vt {
-                VertexP => vbo_p,
-                VertexPN => vbo_pn,
-                VertexPT => vbo_pt,
-                VertexPTN => vbo_ptn
+                Some(VertexP) => vbo_p,
+                Some(VertexPN) => vbo_pn,
+                Some(VertexPT) => vbo_pt,
+                Some(VertexPTN) => vbo_ptn,
+                None => None
             };
-            let vbo = vbo.expect("vbo should have been created. Empty vertex buffer found");
-            let geo = db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
-            if mat.is_some() {
-                let mat = materials.find(mat.as_ref().unwrap());
-                if mat.is_some() {
-                    let obj = db.new_object(Some(objects), name.clone());
-                    db.set_draw(obj, geo, *mat.unwrap());
+            match vbo {
+                None => (),
+                Some(vbo) => {
+                    let geo = db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
+                    if mat.is_some() {
+                        let mat = materials.find(mat.as_ref().unwrap());
+                        if mat.is_some() {
+                            let obj = db.new_object(Some(objects), name.clone());
+                            db.set_draw(obj, geo, *mat.unwrap());
+                        }
+                    }
                 }
             }
+
         }
 
 

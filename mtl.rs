@@ -22,6 +22,7 @@ pub struct Material {
     pub kd: Option<Vector3<f32>>,
     pub ks: Option<Vector3<f32>>,
     pub ke: Option<Vector3<f32>>,
+    pub km: Option<f32>,
     pub tf: Option<Vector3<f32>>,
     pub ns: Option<f32>,
     pub ni: Option<f32>,
@@ -47,6 +48,7 @@ impl Material {
             kd: None,
             ks: None,
             ke: None,
+            km: None,
             ns: None,
             ni: None,
             tr: None,
@@ -190,6 +192,12 @@ impl Mtl {
                 Some("Ni") => {
                     match material {
                         Some(ref mut m) => { m.ni = to_f32(&mut words); }
+                        None => ()
+                    }
+                }
+                Some("Km") => {
+                    match material {
+                        Some(ref mut m) => { m.km = to_f32(&mut words); }
                         None => ()
                     }
                 }
