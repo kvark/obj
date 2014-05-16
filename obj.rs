@@ -13,6 +13,8 @@ use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNor
 
 use cgmath::vector::{Vector3, Vector2};
 
+use mtl::Mtl;
+
 #[deriving(Eq)]
 enum VertexType {
     VertexP,
@@ -37,7 +39,8 @@ pub struct Obj {
     indices_pn: Vec<uint>,
     indices_pt: Vec<uint>,
     indices_ptn: Vec<uint>,
-    objects: Vec<(~str, uint, uint, VertexType)>
+    objects: Vec<(~str, Option<~str>, uint, uint, VertexType)>,
+    materials: Vec<Mtl>
 }
 
 impl Obj {
@@ -58,7 +61,8 @@ impl Obj {
             indices_pn: Vec::new(),
             indices_pt: Vec::new(),
             indices_ptn: Vec::new(),
-            objects: Vec::new()
+            objects: Vec::new(),
+            materials: Vec::new()
         }
     }
 
@@ -266,7 +270,7 @@ impl Obj {
             }
         };
 
-        let mut group: Option<(~str, uint, uint, VertexType)> = None;
+        let mut group: Option<(~str, Option<~str>, uint, uint, VertexType)> = None;
 
         for line in file.lines() {
             let mut words = match line {
@@ -294,14 +298,14 @@ impl Obj {
 
                     match group {
                         None => {
-                            group = Some(("default".to_owned(), start, size, vertex_type))
+                            group = Some(("default".to_owned(), None, start, size, vertex_type))
                         }
-                        Some((name, 0, 0, _)) => {
-                            group = Some((name, start, size, vertex_type))
+                        Some((name, mat, 0, 0, _)) => {
+                            group = Some((name, mat, start, size, vertex_type))
                         }
-                        Some((name, start, len, vt)) => {
+                        Some((name, mat, start, len, vt)) => {
                             assert!(vt == vertex_type);
-                            group = Some((name, start, len+size, vertex_type));
+                            group = Some((name, mat, start, len+size, vertex_type));
                         }
                     }
                 },
@@ -317,12 +321,31 @@ impl Obj {
                     match words.next() {
                         Some(name) => {
                             println!("Object {:s}", name);
-                            group = Some((name.to_owned(), 0, 0, VertexP))
+                            group = Some((name.to_owned(), None, 0, 0, VertexP))
                         },
                         None => ()
                     }
                 },
-                Some("mtllib") | Some("usemtl") | Some("s") => (),
+                Some("mtllib") => {
+                    let mut path = path.clone();
+                    drop(path.pop());
+                    let name = Path::new(words.next().expect("Failed to find name for mtllib"));
+                    let path = path.join(name);
+                    dat.materials.push(Mtl::load(&path).expect("Failed to load mtllib"));
+                }
+                Some("usemtl") => {
+                    match group {
+                        None => {}
+                        Some((name, mat, start, len, vt)) => {
+                            let mat = match  words.next() {
+                                Some(w) => Some(w.to_owned()),
+                                None => None
+                            };
+                            group = Some((name, mat, start, len, vt));
+                        }
+                    }
+                }
+                Some("s") => (),
                 Some(other) => {
                     if other.len() != 0 && other[0] != "#"[0] {
                         fail!("Invalid token {} {:?}", other, words.next());
@@ -340,14 +363,12 @@ impl Obj {
         Some(dat)
     }
 
-    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) {
-        println!("v {} t {} n {}\n",
-            self.vertices.len(),
-            self.textures.len(),
-            self.normals.len()
-        );
+    fn write_vbo(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) 
+            -> (Option<snowmew::ObjectKey>, Option<snowmew::ObjectKey>,
+                Option<snowmew::ObjectKey>, Option<snowmew::ObjectKey>) {
+        
+        let parent = db.new_object(Some(parent), "vertex_buffers");
 
-        // build vertex buffer(s)
         let vbo_p = if self.joined_vertices_p.len() != 0 {
             println!("\tvbo_p i {} ix {}\n",
                 self.indices_p.len(),
@@ -368,7 +389,7 @@ impl Obj {
             }
 
             let vb = graphics::VertexBuffer::new_position(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "vbo_p", vb))
+            Some(db.new_vertex_buffer(parent, "position", vb))
         } else {None};
 
         let vbo_pt = if self.joined_vertices_pt.len() != 0 {
@@ -393,7 +414,7 @@ impl Obj {
             }
 
             let vb = graphics::VertexBuffer::new_position_texture(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "vbo_pt", vb))
+            Some(db.new_vertex_buffer(parent, "position_texture", vb))
         } else {None};
 
         let vbo_pn = if self.joined_vertices_pn.len() != 0 {
@@ -418,7 +439,7 @@ impl Obj {
             }
 
             let vb = graphics::VertexBuffer::new_position_normal(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "vbo_pn", vb))
+            Some(db.new_vertex_buffer(parent, "position_normal", vb))
         } else {None};
 
         let vbo_ptn = if self.joined_vertices_ptn.len() != 0 {
@@ -445,12 +466,48 @@ impl Obj {
             }
 
             let vb = graphics::VertexBuffer::new_position_texture_normal(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "vbo_ptn", vb))
+            Some(db.new_vertex_buffer(parent, "position_texture_normal", vb))
         } else {None};
 
-        let geometry = db.add_dir(Some(parent), "geometry");
+        (vbo_p, vbo_pt, vbo_pn, vbo_ptn)
+    }
 
-        for &(ref name, start, len, vt) in self.objects.iter() {
+
+    fn write_materials(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
+            -> HashMap<~str, snowmew::ObjectKey> {
+
+        let mut name_to_id = HashMap::new();
+
+        let mat = db.new_object(Some(parent), "materials");
+        for m_dir in self.materials.iter() {
+            for m in m_dir.materials.iter() {
+                let mut mat = graphics::Material::new();
+                if m.ka.is_some() { mat.set_Ka(*m.ka.as_ref().unwrap()); }
+                if m.kd.is_some() { mat.set_Kd(*m.kd.as_ref().unwrap()); }
+                if m.ks.is_some() { mat.set_Ks(*m.ks.as_ref().unwrap()); }
+                if m.ke.is_some() { mat.set_Ke(*m.ke.as_ref().unwrap()); }
+
+                let id = db.new_material(parent, m.name, mat);
+                name_to_id.insert(m.name.clone(), id);
+            }
+        }
+
+        name_to_id
+    }
+
+
+    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) {
+        println!("v {} t {} n {}\n",
+            self.vertices.len(),
+            self.textures.len(),
+            self.normals.len()
+        );
+
+        let materials = self.write_materials(parent, db);
+        let (vbo_p, vbo_pt, vbo_pn, vbo_ptn) = self.write_vbo(parent, db);
+        let geometry = db.add_dir(Some(parent), "geometry");
+        let objects = db.add_dir(Some(parent), "objects");
+        for &(ref name, ref mat, start, len, vt) in self.objects.iter() {
             let vbo = match vt {
                 VertexP => vbo_p,
                 VertexPN => vbo_pn,
@@ -458,7 +515,17 @@ impl Obj {
                 VertexPTN => vbo_ptn
             };
             let vbo = vbo.expect("vbo should have been created. Empty vertex buffer found");
-            db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
+            let geo = db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
+            if mat.is_some() {
+                let mat = materials.find(mat.as_ref().unwrap());
+                if mat.is_some() {
+                    let obj = db.new_object(Some(objects), name.clone());
+                    db.set_draw(obj, geo, *mat.unwrap());
+                }
+            }
         }
+
+
+
     }
 }

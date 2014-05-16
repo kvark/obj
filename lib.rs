@@ -3,6 +3,7 @@
 #![crate_type = "lib"]
 #![comment = "An asset loader for snowmew"]
 
+extern crate core;
 extern crate snowmew;
 extern crate cgmath;
 extern crate collections;
@@ -11,3 +12,4 @@ extern crate graphics = "snowmew-graphics";
 pub use obj::Obj;
 
 mod obj;
+mod mtl;
