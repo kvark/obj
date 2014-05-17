@@ -226,7 +226,7 @@ impl Mtl {
                 }
                 Some("map_Kd") => {
                     match material {
-                        Some(ref mut m) => { m.map_ka = to_string(&mut words); }
+                        Some(ref mut m) => { m.map_kd = to_string(&mut words); }
                         None => ()
                     }
                 }
