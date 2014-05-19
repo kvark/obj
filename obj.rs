@@ -45,6 +45,18 @@ pub struct Obj {
     materials: Vec<Mtl>
 }
 
+fn lookup<'a, T: Clone>(s: &'a [T], idx: uint) -> T {
+    s[idx].clone()
+}
+
+fn normalize(idx: int, len: uint) -> uint {
+    if idx < 0 {
+        (len as int + idx) as uint
+    } else {
+        idx as uint - 1
+    }
+}
+
 impl Obj {
     fn new() -> Obj {
         Obj {
@@ -117,83 +129,109 @@ impl Obj {
         self.normals.push(normal);
     }
 
-    fn parse_group_p(&mut self, p: &str) -> uint {
-        let p: uint = FromStr::from_str(p).expect("Invalid number");
+    fn parse_group_p(&mut self, p: &str) -> Result<uint, ~str> {
+        let p = match FromStr::from_str(p) {
+            Some(p) => {
+                normalize(p, self.vertices.len())
+            },
+            None => return Err(format!("'{}'' could not be converted to int", p))
+        };
+
         match self.joined_vertices_map_p.find(&p) {
             Some(&idx) => {
-                return idx;
+                return Ok(idx);
             },
             None => {
                 let len = self.joined_vertices_p.len();
                 self.joined_vertices_map_p.insert(p, len);
                 self.joined_vertices_p.push(p);
-                return len;
+                return Ok(len);
             }
         }
     }
 
-    fn parse_group_pt(&mut self, p: &str, t: &str) -> uint {
-        let p: uint = FromStr::from_str(p).expect("Invalid number");
-        let t: uint = FromStr::from_str(t).expect("Invalid number");
+    fn parse_group_pt(&mut self, p: &str, t: &str) -> Result<uint, ~str> {
+        let pt = match (FromStr::from_str(p), FromStr::from_str(t)) {
+            (Some(p), Some(t)) => {
+                let p = normalize(p, self.vertices.len());
+                let t = normalize(t, self.textures.len());
+                (p, t)
+            },
+            (None, _) => return Err(format!("'{}' could not be converted to int", p)),
+            (_, None) => return Err(format!("'{}' could not be converted to int", t))
+        };
 
-        let pt = (p, t);
         match self.joined_vertices_map_pt.find(&pt) {
             Some(&idx) => {
-                return idx;
+                return Ok(idx);
             },
             None => {
                 let len = self.joined_vertices_pt.len();
                 self.joined_vertices_map_pt.insert(pt, len);
                 self.joined_vertices_pt.push(pt);
-                return len;
+                return Ok(len);
             }
         }
     }
 
-    fn parse_group_pn(&mut self, p: &str, n: &str) -> uint {
-        let p: uint = FromStr::from_str(p).expect("Invalid number");
-        let n: uint = FromStr::from_str(n).expect("Invalid number");
+    fn parse_group_pn(&mut self, p: &str, n: &str) -> Result<uint, ~str> {
+        let pn = match (FromStr::from_str(p), FromStr::from_str(n)) {
+            (Some(p), Some(n)) => {
+                let p = normalize(p, self.vertices.len());
+                let n = normalize(n, self.normals.len());
+                (p, n)
+            },
+            (None, _) => return Err(format!("'{}' could not be converted to int", p)),
+            (_, None) => return Err(format!("'{}' could not be converted to int", n))
+        };
 
-        let pn = (p, n);
         match self.joined_vertices_map_pn.find(&pn) {
             Some(&idx) => {
-                return idx;
+                return Ok(idx);
             },
             None => {
                 let len = self.joined_vertices_pn.len();
                 self.joined_vertices_map_pn.insert(pn, len);
                 self.joined_vertices_pn.push(pn);
-                return len;
+                return Ok(len);
             }
         }
     }
 
-    fn parse_group_ptn(&mut self, p: &str, t: &str, n: &str) -> uint {
-        let p: uint = FromStr::from_str(p).expect("Invalid number");
-        let t: uint = FromStr::from_str(t).expect("Invalid number");
-        let n: uint = FromStr::from_str(n).expect("Invalid number");
+    fn parse_group_ptn(&mut self, p: &str, t: &str, n: &str) -> Result<uint, ~str> {
+        let ptn = match (FromStr::from_str(p), FromStr::from_str(t), FromStr::from_str(n)) {
+            (Some(p), Some(t), Some(n)) => {
+                let p = normalize(p, self.vertices.len());
+                let t = normalize(t, self.textures.len());
+                let n = normalize(n, self.normals.len());
+                (p, t, n)
+            },
+            (None, _, _) => return Err(format!("'{}' could not be converted to int", p)),
+            (_, None, _) => return Err(format!("'{}' could not be converted to int", t)),
+            (_, _, None) => return Err(format!("'{}' could not be converted to int", n))
+        };
 
-        let ptn = (p, t, n);
+
         match self.joined_vertices_map_ptn.find(&ptn) {
             Some(&idx) => {
-                return idx;
+                return Ok(idx);
             },
             None => {
                 let len = self.joined_vertices_ptn.len();
                 self.joined_vertices_map_ptn.insert(ptn, len);
                 self.joined_vertices_ptn.push(ptn);
-                return len;
+                return Ok(len);
             }
         }
     }
 
-    fn parse_group(&mut self, group: &str) -> (VertexType, uint) {
+    fn parse_group(&mut self, group: &str) -> Result<(VertexType, uint), ~str> {
         let mut group_split = group.split('/');
         let p = group_split.next();
         let t = group_split.next();
         let n = group_split.next();
 
-        match (p, t, n) {
+        let (vt, res) = match (p, t, n) {
             (Some(p), None, None) => {
                 (VertexP, self.parse_group_p(p))
             }
@@ -204,57 +242,89 @@ impl Obj {
                 (VertexPN, self.parse_group_pn(p, n))
             }
             (Some(p), Some(t), Some(n)) => {
-                (VertexPTN, self.parse_group_ptn(p, t, n))
+                if t == "" {
+                    (VertexPN, self.parse_group_pn(p, n))
+                } else {
+                    (VertexPTN, self.parse_group_ptn(p, t, n))
+                }
             },
             _ => fail!("poorly formed group {:s}", group)
+        };
+
+        match res {
+            Ok(idx) => Ok((vt, idx)),
+            Err(err) => Err(err)
         }
     }
 
-    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) -> (VertexType, uint, uint) {
-        let (t, g0) = self.parse_group(g0);
-        let (_, g1) = self.parse_group(g1);
-        let (_, g2) = self.parse_group(g2);
+    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) 
+            -> Result<(VertexType, uint, uint), ~str> {
+        let g0 = self.parse_group(g0);
+        let g1 = self.parse_group(g1);
+        let g2 = self.parse_group(g2);
 
-        let indices = match t {
-            VertexP => &mut self.indices_p,
-            VertexPT => &mut self.indices_pt,
-            VertexPN => &mut self.indices_pn,
-            VertexPTN => &mut self.indices_ptn,
-        };
-
-        let start = indices.len();
-        indices.push(g0);
-        indices.push(g1);
-        indices.push(g2);
-
-        (t, start, 3)
+        match (g0, g1, g2) {
+            (Ok((t0, g0)), Ok((t1, g1)), Ok((t2, g2))) => {
+                if t0 == t1 && t1 == t2 {
+                    let indices = match t0 {
+                        VertexP => &mut self.indices_p,
+                        VertexPT => &mut self.indices_pt,
+                        VertexPN => &mut self.indices_pn,
+                        VertexPTN => &mut self.indices_ptn,
+                    };
+                    let start = indices.len();
+                    indices.push(g0);
+                    indices.push(g1);
+                    indices.push(g2);
+                    Ok((t0, start, 3))
+                } else {
+                    Err("Group type does not match".to_owned())
+                }
+            }
+            (Err(e), _, _) => { Err(e) }
+            (_, Err(e), _) => { Err(e) }
+            (_, _, Err(e)) => { Err(e) }
+        }
+        
     }
 
-    fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str) -> (VertexType, uint, uint) {
-        let (t, g0) = self.parse_group(g0);
-        let (_, g1) = self.parse_group(g1);
-        let (_, g2) = self.parse_group(g2);
-        let (_, g3) = self.parse_group(g3);
+    fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str) 
+            -> Result<(VertexType, uint, uint), ~str> {
+        let g0 = self.parse_group(g0);
+        let g1 = self.parse_group(g1);
+        let g2 = self.parse_group(g2);
+        let g3 = self.parse_group(g3);
 
-        let indices = match t {
-            VertexP => &mut self.indices_p,
-            VertexPT => &mut self.indices_pt,
-            VertexPN => &mut self.indices_pn,
-            VertexPTN => &mut self.indices_ptn,
-        };
-
-        let start = indices.len();
-        indices.push(g0);
-        indices.push(g1);
-        indices.push(g2);
-        indices.push(g2);
-        indices.push(g3);
-        indices.push(g0);
-
-        (t, start, 6)
+        match (g0, g1, g2, g3) {
+            (Ok((t0, g0)), Ok((t1, g1)), Ok((t2, g2)), Ok((t3, g3))) => {
+                if t0 == t1 && t1 == t2 && t2 == t3 {
+                    let indices = match t0 {
+                        VertexP => &mut self.indices_p,
+                        VertexPT => &mut self.indices_pt,
+                        VertexPN => &mut self.indices_pn,
+                        VertexPTN => &mut self.indices_ptn,
+                    };
+                    let start = indices.len();
+                    indices.push(g0);
+                    indices.push(g1);
+                    indices.push(g2);
+                    indices.push(g2);
+                    indices.push(g3);
+                    indices.push(g0);
+                    Ok((t0, start, 6))
+                } else {
+                    Err("Group type does not match".to_owned())
+                }
+            }
+            (Err(e), _, _, _) => { Err(e) }
+            (_, Err(e), _, _) => { Err(e) }
+            (_, _, Err(e), _) => { Err(e) }
+            (_, _, _, Err(e)) => { Err(e) }
+        }
     }
 
-    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) -> (VertexType, uint, uint) {
+    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) 
+            -> Result<(VertexType, uint, uint), ~str> {
         match (g0, g1, g2, g3) {
             (Some(g0), Some(g1), Some(g2), None) => self.parse_triangle(g0, g1, g2),
             (Some(g0), Some(g1), Some(g2), Some(g3)) => self.parse_quad(g0, g1, g2, g3),
@@ -277,7 +347,7 @@ impl Obj {
 
         let mut group: Option<(~str, Option<~str>, uint, uint, Option<VertexType>)> = None;
 
-        for line in file.lines() {
+        for (idx, line) in file.lines().enumerate() {
             let mut words = match line {
                 Ok(ref line) => line.words(),
                 Err(err) => fail!("failed to readline {:?}", err)
@@ -299,7 +369,13 @@ impl Obj {
                 },
                 Some("f") => {
                     let (g0, g1, g2, g3) = (words.next(), words.next(), words.next(), words.next());
-                    let (vertex_type, start, size) = dat.parse_face(g0, g1, g2, g3);
+
+                    let (vertex_type, start, size) = match dat.parse_face(g0, g1, g2, g3) {
+                        Err(e) => fail!("Could not parse line: {}\nline: {}: {}",
+                            e, idx, line
+                        ),
+                        Ok((a, b, c)) => (a, b, c)
+                    };
 
                     match group {
                         None => {
@@ -380,8 +456,8 @@ impl Obj {
                 self.joined_vertices_p.len(),
             );
             let mut vertices = Vec::new();
-            for p in self.joined_vertices_p.iter() {
-                let p = *self.vertices.get(p-1);
+            for &p in self.joined_vertices_p.iter() {
+                let p = lookup(self.vertices.as_slice(), p);
 
                 vertices.push( VertexGeo {
                     position: p
@@ -404,8 +480,8 @@ impl Obj {
             );
             let mut vertices = Vec::new();
             for &(p, t) in self.joined_vertices_pt.iter() {
-                let p = *self.vertices.get(p-1);
-                let t = *self.textures.get(t-1);
+                let p = lookup(self.vertices.as_slice(), p);
+                let t = lookup(self.textures.as_slice(), t);
 
                 vertices.push( VertexGeoTex {
                     position: p,
@@ -429,8 +505,8 @@ impl Obj {
             );
             let mut vertices = Vec::new();
             for &(p, n) in self.joined_vertices_pn.iter() {
-                let p = *self.vertices.get(p-1);
-                let n = *self.normals.get(n-1);
+                let p = lookup(self.vertices.as_slice(), p);
+                let n = lookup(self.normals.as_slice(), n);
 
                 vertices.push( VertexGeoNorm {
                     position: p,
@@ -454,9 +530,9 @@ impl Obj {
             );
             let mut vertices = Vec::new();
             for &(p, t, n) in self.joined_vertices_ptn.iter() {
-                let p = *self.vertices.get(p-1);
-                let t = *self.textures.get(t-1);
-                let n = *self.normals.get(n-1);
+                let p = lookup(self.vertices.as_slice(), p);
+                let t = lookup(self.textures.as_slice(), t);
+                let n = lookup(self.normals.as_slice(), n);
 
                 vertices.push( VertexGeoTexNorm {
                     position: p,
@@ -483,8 +559,7 @@ impl Obj {
         let mut map = HashMap::new();
         for m_dir in self.materials.iter() {
             for m in m_dir.materials.iter() {
-                let text = &[&m.map_ka, &m.map_kd, &m.map_ks, &m.map_ke,
-                             &m.map_ns, &m.map_d, &m.map_bump, &m.map_refl];
+                let text = &[&m.map_ka, &m.map_kd, &m.map_ks, &m.map_ke];
                 for t in text.iter() {
                     match *t {
                         &None => (),
@@ -514,6 +589,7 @@ impl Obj {
         let mut name_to_id = HashMap::new();
 
         let lookup = |name| {
+            println!("{} {}", name, *text.find(name).expect("texture not found"));
             *text.find(name).expect("texture not found")
         };
 
