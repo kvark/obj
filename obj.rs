@@ -627,6 +627,7 @@ impl Obj {
         let geometry = db.add_dir(Some(parent), "geometry");
         let objects = db.add_dir(Some(parent), "objects");
         for &(ref name, ref mat, start, len, vt) in self.objects.iter() {
+            println!("{} {}", name, mat);
             let vbo = match vt {
                 Some(VertexP) => vbo_p,
                 Some(VertexPN) => vbo_pn,
