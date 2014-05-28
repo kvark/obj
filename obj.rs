@@ -601,6 +601,8 @@ impl Obj {
                 if m.kd.is_some() { mat.set_Kd(*m.kd.as_ref().unwrap()); }
                 if m.ks.is_some() { mat.set_Ks(*m.ks.as_ref().unwrap()); }
                 if m.ke.is_some() { mat.set_Ke(*m.ke.as_ref().unwrap()); }
+                if m.ni.is_some() { mat.set_ni(*m.ni.as_ref().unwrap()); }
+                if m.ns.is_some() { mat.set_ns(*m.ns.as_ref().unwrap()); }
                 if m.map_ka.is_some() { mat.set_map_Ka(lookup(m.map_ka.as_ref().unwrap())); }
                 if m.map_kd.is_some() { mat.set_map_Kd(lookup(m.map_kd.as_ref().unwrap())); }
                 if m.map_ks.is_some() { mat.set_map_Ks(lookup(m.map_ks.as_ref().unwrap())); }
