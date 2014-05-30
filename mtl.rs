@@ -9,7 +9,7 @@ use std::from_str::FromStr;
 use cgmath::vector::{Vector3};
 
 pub struct Material {
-    pub name: ~str,
+    pub name: String,
 
     pub ka: Option<Vector3<f32>>,
     pub kd: Option<Vector3<f32>>,
@@ -23,18 +23,18 @@ pub struct Material {
     pub d: Option<f32>,
     pub illum: Option<int>,
 
-    pub map_ka:   Option<~str>,
-    pub map_kd:   Option<~str>,
-    pub map_ks:   Option<~str>,
-    pub map_ke:   Option<~str>,
-    pub map_ns:   Option<~str>,
-    pub map_d:    Option<~str>,
-    pub map_bump: Option<~str>,
-    pub map_refl: Option<~str>,
+    pub map_ka:   Option<String>,
+    pub map_kd:   Option<String>,
+    pub map_ks:   Option<String>,
+    pub map_ke:   Option<String>,
+    pub map_ns:   Option<String>,
+    pub map_d:    Option<String>,
+    pub map_bump: Option<String>,
+    pub map_refl: Option<String>,
 }
 
 impl Material {
-    fn new(name: ~str) -> Material {
+    fn new(name: String) -> Material {
         Material {
             name: name,
             ka: None,
@@ -64,7 +64,7 @@ pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<Vector3<f32>> {
     let (x, y, z) = match (w.next(), w.next(), w.next()) {
         (Some(x), Some(y), Some(z)) => (x, y, z),
         other => {
-            println!("invalid {:?}", other);
+            println!("invalid {}", other);
             return None;
         }
     };
@@ -76,7 +76,7 @@ pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<Vector3<f32>> {
     match (x, y, z) {
         (Some(x), Some(y), Some(z)) => Some(Vector3::new(x, y, z)),
         other => {
-            println!("invalid {:?}", other);
+            println!("invalid {}", other);
             None
         }
     }
@@ -86,7 +86,7 @@ pub fn to_int<'a>(w: &mut Words<'a>) -> Option<int> {
     let v = match w.next() {
         Some(v) => v,
         other => {
-            println!("invalid {:?}", other);
+            println!("invalid {}", other);
             return None;
         }
     };
@@ -97,18 +97,18 @@ pub fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
     let v = match w.next() {
         Some(v) => v,
         other => {
-            println!("invalid {:?}", other);
+            println!("invalid {}", other);
             return None;
         }
     };
     FromStr::from_str(v)
 }
 
-pub fn to_string<'a>(w: &mut Words<'a>) -> Option<~str> {
+pub fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
     match w.last() {
-        Some(v) => Some(v.to_owned()),
+        Some(v) => Some(v.to_string()),
         other => {
-            println!("invalid {:?}", other);
+            println!("invalid {}", other);
             None
         }
     }
@@ -139,8 +139,8 @@ impl Mtl {
         let mut material = None;
         for line in file.lines() {
             let mut words = match line {
-                Ok(ref line) => line.words(),
-                Err(err) => fail!("failed to readline {:?}", err)
+                Ok(ref line) => line.as_slice().words(),
+                Err(err) => fail!("failed to readline {}", err)
             };
             let first = words.next();
             match first {
@@ -149,7 +149,7 @@ impl Mtl {
                         mtl.materials.push(material.take().unwrap());
                     }
                     material = Some(Material::new(
-                        words.next().expect("Failed to read name").to_owned()
+                        words.next().expect("Failed to read name").to_string()
                     ))
                 }
                 Some("Ka") => {

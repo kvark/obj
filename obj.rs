@@ -41,7 +41,7 @@ pub struct Obj {
     indices_pn: Vec<uint>,
     indices_pt: Vec<uint>,
     indices_ptn: Vec<uint>,
-    objects: Vec<(~str, Option<~str>, uint, uint, Option<VertexType>)>,
+    objects: Vec<(String, Option<String>, uint, uint, Option<VertexType>)>,
     materials: Vec<Mtl>
 }
 
@@ -129,7 +129,7 @@ impl Obj {
         self.normals.push(normal);
     }
 
-    fn parse_group_p(&mut self, p: &str) -> Result<uint, ~str> {
+    fn parse_group_p(&mut self, p: &str) -> Result<uint, String> {
         let p = match FromStr::from_str(p) {
             Some(p) => {
                 normalize(p, self.vertices.len())
@@ -150,7 +150,7 @@ impl Obj {
         }
     }
 
-    fn parse_group_pt(&mut self, p: &str, t: &str) -> Result<uint, ~str> {
+    fn parse_group_pt(&mut self, p: &str, t: &str) -> Result<uint, String> {
         let pt = match (FromStr::from_str(p), FromStr::from_str(t)) {
             (Some(p), Some(t)) => {
                 let p = normalize(p, self.vertices.len());
@@ -174,7 +174,7 @@ impl Obj {
         }
     }
 
-    fn parse_group_pn(&mut self, p: &str, n: &str) -> Result<uint, ~str> {
+    fn parse_group_pn(&mut self, p: &str, n: &str) -> Result<uint, String> {
         let pn = match (FromStr::from_str(p), FromStr::from_str(n)) {
             (Some(p), Some(n)) => {
                 let p = normalize(p, self.vertices.len());
@@ -198,7 +198,7 @@ impl Obj {
         }
     }
 
-    fn parse_group_ptn(&mut self, p: &str, t: &str, n: &str) -> Result<uint, ~str> {
+    fn parse_group_ptn(&mut self, p: &str, t: &str, n: &str) -> Result<uint, String> {
         let ptn = match (FromStr::from_str(p), FromStr::from_str(t), FromStr::from_str(n)) {
             (Some(p), Some(t), Some(n)) => {
                 let p = normalize(p, self.vertices.len());
@@ -225,7 +225,7 @@ impl Obj {
         }
     }
 
-    fn parse_group(&mut self, group: &str) -> Result<(VertexType, uint), ~str> {
+    fn parse_group(&mut self, group: &str) -> Result<(VertexType, uint), String> {
         let mut group_split = group.split('/');
         let p = group_split.next();
         let t = group_split.next();
@@ -258,7 +258,7 @@ impl Obj {
     }
 
     fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) 
-            -> Result<(VertexType, uint, uint), ~str> {
+            -> Result<(VertexType, uint, uint), String> {
         let g0 = self.parse_group(g0);
         let g1 = self.parse_group(g1);
         let g2 = self.parse_group(g2);
@@ -278,7 +278,7 @@ impl Obj {
                     indices.push(g2);
                     Ok((t0, start, 3))
                 } else {
-                    Err("Group type does not match".to_owned())
+                    Err("Group type does not match".to_string())
                 }
             }
             (Err(e), _, _) => { Err(e) }
@@ -289,7 +289,7 @@ impl Obj {
     }
 
     fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str) 
-            -> Result<(VertexType, uint, uint), ~str> {
+            -> Result<(VertexType, uint, uint), String> {
         let g0 = self.parse_group(g0);
         let g1 = self.parse_group(g1);
         let g2 = self.parse_group(g2);
@@ -313,7 +313,7 @@ impl Obj {
                     indices.push(g0);
                     Ok((t0, start, 6))
                 } else {
-                    Err("Group type does not match".to_owned())
+                    Err("Group type does not match".to_string())
                 }
             }
             (Err(e), _, _, _) => { Err(e) }
@@ -324,7 +324,7 @@ impl Obj {
     }
 
     fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>) 
-            -> Result<(VertexType, uint, uint), ~str> {
+            -> Result<(VertexType, uint, uint), String> {
         match (g0, g1, g2, g3) {
             (Some(g0), Some(g1), Some(g2), None) => self.parse_triangle(g0, g1, g2),
             (Some(g0), Some(g1), Some(g2), Some(g3)) => self.parse_quad(g0, g1, g2, g3),
@@ -345,12 +345,12 @@ impl Obj {
 
         dat.path = path.clone();
 
-        let mut group: Option<(~str, Option<~str>, uint, uint, Option<VertexType>)> = None;
+        let mut group: Option<(String, Option<String>, uint, uint, Option<VertexType>)> = None;
 
         for (idx, line) in file.lines().enumerate() {
             let mut words = match line {
-                Ok(ref line) => line.words(),
-                Err(err) => fail!("failed to readline {:?}", err)
+                Ok(ref line) => line.as_slice().words(),
+                Err(err) => fail!("failed to readline {}", err)
             };
             let first = words.next();
 
@@ -379,7 +379,7 @@ impl Obj {
 
                     match group {
                         None => {
-                            group = Some(("default".to_owned(), None, start, size, None))
+                            group = Some(("default".to_string(), None, start, size, None))
                         }
                         Some((name, mat, 0, 0, _)) => {
                             group = Some((name, mat, start, size, Some(vertex_type)))
@@ -402,7 +402,7 @@ impl Obj {
                     match words.next() {
                         Some(name) => {
                             println!("Object {:s}", name);
-                            group = Some((name.to_owned(), None, 0, 0, Some(VertexP)))
+                            group = Some((name.to_string(), None, 0, 0, Some(VertexP)))
                         },
                         None => ()
                     }
@@ -419,7 +419,7 @@ impl Obj {
                         None => {}
                         Some((name, _, start, len, vt)) => {
                             let mat = match  words.next() {
-                                Some(w) => Some(w.to_owned()),
+                                Some(w) => Some(w.to_string()),
                                 None => None
                             };
                             group = Some((name, mat, start, len, vt));
@@ -429,7 +429,7 @@ impl Obj {
                 Some("s") => (),
                 Some(other) => {
                     if other.len() != 0 && other[0] != "#"[0] {
-                        fail!("Invalid token {} {:?}", other, words.next());
+                        fail!("Invalid token {} {}", other, words.next());
                     }
                 }
                 None => (),
@@ -554,7 +554,7 @@ impl Obj {
     }
 
     fn write_textures(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
-            -> HashMap<~str, snowmew::ObjectKey> {
+            -> HashMap<String, snowmew::ObjectKey> {
         let parent = db.new_object(Some(parent), "textures");
         let mut map = HashMap::new();
         for m_dir in self.materials.iter() {
@@ -569,7 +569,7 @@ impl Obj {
                                 let mut path = self.path.clone();
                                 drop(path.pop());
                                 let text = load_texture(&path.join(&Path::new(t.clone())));
-                                let id = db.new_texture(parent, t.clone(), text);
+                                let id = db.new_texture(parent, t.as_slice(), text);
                                 map.insert(t.clone(), id);
                             }
                         }
@@ -583,8 +583,8 @@ impl Obj {
     fn write_materials(&self,
                        parent: snowmew::ObjectKey,
                        db: &mut graphics::Graphics,
-                       text: &HashMap<~str, snowmew::ObjectKey>)
-            -> HashMap<~str, snowmew::ObjectKey> {
+                       text: &HashMap<String, snowmew::ObjectKey>)
+            -> HashMap<String, snowmew::ObjectKey> {
 
         let mut name_to_id = HashMap::new();
 
@@ -600,14 +600,14 @@ impl Obj {
                 if m.ka.is_some() { mat.set_Ka(*m.ka.as_ref().unwrap()); }
                 if m.kd.is_some() { mat.set_Kd(*m.kd.as_ref().unwrap()); }
                 if m.ks.is_some() { mat.set_Ks(*m.ks.as_ref().unwrap()); }
-                if m.ke.is_some() { mat.set_Ke(*m.ke.as_ref().unwrap()); }
+            if m.ke.is_some() { mat.set_Ke(*m.ke.as_ref().unwrap()); }
                 if m.ni.is_some() { mat.set_ni(*m.ni.as_ref().unwrap()); }
                 if m.ns.is_some() { mat.set_ns(*m.ns.as_ref().unwrap()); }
                 if m.map_ka.is_some() { mat.set_map_Ka(lookup(m.map_ka.as_ref().unwrap())); }
                 if m.map_kd.is_some() { mat.set_map_Kd(lookup(m.map_kd.as_ref().unwrap())); }
                 if m.map_ks.is_some() { mat.set_map_Ks(lookup(m.map_ks.as_ref().unwrap())); }
                 if m.map_ke.is_some() { mat.set_map_Ke(lookup(m.map_ke.as_ref().unwrap())); }
-                let id = db.new_material(parent, m.name, mat);
+                let id = db.new_material(parent, m.name.as_slice(), mat);
                 name_to_id.insert(m.name.clone(), id);
             }
         }
@@ -640,11 +640,11 @@ impl Obj {
             match vbo {
                 None => (),
                 Some(vbo) => {
-                    let geo = db.new_geometry(geometry, name.clone(), Geometry::triangles(vbo, start, len));
+                    let geo = db.new_geometry(geometry, name.as_slice(), Geometry::triangles(vbo, start, len));
                     if mat.is_some() {
                         let mat = materials.find(mat.as_ref().unwrap());
                         if mat.is_some() {
-                            let obj = db.new_object(Some(objects), name.clone());
+                            let obj = db.new_object(Some(objects), name.as_slice());
                             db.set_draw(obj, geo, *mat.unwrap());
                         }
                     }
