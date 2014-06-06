@@ -16,7 +16,7 @@ use cgmath::vector::{Vector3, Vector2};
 use mtl::Mtl;
 use texture::load_texture;
 
-#[deriving(Eq)]
+#[deriving(PartialEq)]
 enum VertexType {
     VertexP,
     VertexPT,
@@ -589,7 +589,6 @@ impl Obj {
         let mut name_to_id = HashMap::new();
 
         let lookup = |name| {
-            println!("{} {}", name, *text.find(name).expect("texture not found"));
             *text.find(name).expect("texture not found")
         };
 
