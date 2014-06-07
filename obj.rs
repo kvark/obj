@@ -4,7 +4,7 @@ use std::io::{File, Open, Read};
 use std::path::Path;
 use std::from_str::FromStr;
 
-use collections::HashMap;
+use std::collections::HashMap;
 
 use snowmew;
 use snowmew::common::Common;
