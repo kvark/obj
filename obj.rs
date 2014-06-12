@@ -596,16 +596,16 @@ impl Obj {
         for m_dir in self.materials.iter() {
             for m in m_dir.materials.iter() {
                 let mut mat = graphics::Material::new();
-                if m.ka.is_some() { mat.set_Ka(*m.ka.as_ref().unwrap()); }
-                if m.kd.is_some() { mat.set_Kd(*m.kd.as_ref().unwrap()); }
-                if m.ks.is_some() { mat.set_Ks(*m.ks.as_ref().unwrap()); }
-            if m.ke.is_some() { mat.set_Ke(*m.ke.as_ref().unwrap()); }
+                if m.ka.is_some() { mat.set_ka(*m.ka.as_ref().unwrap()); }
+                if m.kd.is_some() { mat.set_kd(*m.kd.as_ref().unwrap()); }
+                if m.ks.is_some() { mat.set_ks(*m.ks.as_ref().unwrap()); }
+            if m.ke.is_some() { mat.set_ke(*m.ke.as_ref().unwrap()); }
                 if m.ni.is_some() { mat.set_ni(*m.ni.as_ref().unwrap()); }
                 if m.ns.is_some() { mat.set_ns(*m.ns.as_ref().unwrap()); }
-                if m.map_ka.is_some() { mat.set_map_Ka(lookup(m.map_ka.as_ref().unwrap())); }
-                if m.map_kd.is_some() { mat.set_map_Kd(lookup(m.map_kd.as_ref().unwrap())); }
-                if m.map_ks.is_some() { mat.set_map_Ks(lookup(m.map_ks.as_ref().unwrap())); }
-                if m.map_ke.is_some() { mat.set_map_Ke(lookup(m.map_ke.as_ref().unwrap())); }
+                if m.map_ka.is_some() { mat.set_map_ka(lookup(m.map_ka.as_ref().unwrap())); }
+                if m.map_kd.is_some() { mat.set_map_kd(lookup(m.map_kd.as_ref().unwrap())); }
+                if m.map_ks.is_some() { mat.set_map_ks(lookup(m.map_ks.as_ref().unwrap())); }
+                if m.map_ke.is_some() { mat.set_map_ke(lookup(m.map_ke.as_ref().unwrap())); }
                 let id = db.new_material(parent, m.name.as_slice(), mat);
                 name_to_id.insert(m.name.clone(), id);
             }
