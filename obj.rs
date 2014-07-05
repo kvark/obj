@@ -428,7 +428,7 @@ impl Obj {
                 }
                 Some("s") => (),
                 Some(other) => {
-                    if other.len() != 0 && other[0] != "#"[0] {
+                    if other.len() != 0 && other.char_at(0) != "#".char_at(0) {
                         fail!("Invalid token {} {}", other, words.next());
                     }
                 }
