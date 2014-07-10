@@ -1,7 +1,9 @@
-#![crate_id = "github.com/csherratt/snowmew#snowmew-loader:0.1"]
+#![crate_name = "snowmew-loader"]
 #![license = "ASL2"]
 #![crate_type = "lib"]
 #![comment = "An asset loader for snowmew"]
+
+extern crate debug;
 
 extern crate core;
 extern crate snowmew;

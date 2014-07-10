@@ -1,5 +1,5 @@
 
-use core::str::Words;
+use std::str::Words;
 
 use std::io::BufferedReader;
 use std::io::{File, Open, Read};

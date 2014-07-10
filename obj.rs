@@ -1,4 +1,5 @@
 
+
 use std::io::BufferedReader;
 use std::io::{File, Open, Read};
 use std::path::Path;
@@ -353,6 +354,9 @@ impl Obj {
                 Err(err) => fail!("failed to readline {}", err)
             };
             let first = words.next();
+            println!("first {}", first)
+            println!("group push {:?}", group);
+
 
             match first {
                 Some("v") => {
@@ -377,18 +381,18 @@ impl Obj {
                         Ok((a, b, c)) => (a, b, c)
                     };
 
-                    match group {
+                    group = match group {
                         None => {
-                            group = Some(("default".to_string(), None, start, size, None))
+                            Some(("default".to_string(), None, start, size, None))
                         }
                         Some((name, mat, 0, 0, _)) => {
-                            group = Some((name, mat, start, size, Some(vertex_type)))
+                            Some((name, mat, start, size, Some(vertex_type)))
                         }
                         Some((name, mat, start, len, vt)) => {
                             assert!(vt == Some(vertex_type));
-                            group = Some((name, mat, start, len+size, Some(vertex_type)));
+                            Some((name, mat, start, len+size, Some(vertex_type)))
                         }
-                    }
+                    };
                 },
                 Some("o") | Some("g") => {
                     match group {
@@ -415,16 +419,13 @@ impl Obj {
                     dat.materials.push(Mtl::load(&path).expect("Failed to load mtllib"));
                 }
                 Some("usemtl") => {
-                    match group {
-                        None => {}
-                        Some((name, _, start, len, vt)) => {
-                            let mat = match  words.next() {
-                                Some(w) => Some(w.to_string()),
-                                None => None
-                            };
-                            group = Some((name, mat, start, len, vt));
-                        }
-                    }
+                    group = group.map(|(name, _, start, len, vt)| {
+                        let mat = match words.next() {
+                            Some(w) => Some(w.to_string()),
+                            None => None
+                        };
+                        (name, mat, start, len, vt)
+                    });
                 }
                 Some("s") => (),
                 Some(other) => {
@@ -438,6 +439,7 @@ impl Obj {
         }
 
         if group.is_some() {
+            println!("group push {:?}", group);
             dat.objects.push(group.unwrap());
         }
 
