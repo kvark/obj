@@ -354,8 +354,6 @@ impl Obj {
                 Err(err) => fail!("failed to readline {}", err)
             };
             let first = words.next();
-            println!("first {}", first)
-            println!("group push {:?}", group);
 
 
             match first {
