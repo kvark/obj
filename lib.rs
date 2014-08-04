@@ -6,7 +6,7 @@
 extern crate debug;
 
 extern crate core;
-extern crate snowmew;
+extern crate snowmew  = "snowmew-core";
 extern crate cgmath;
 extern crate collections;
 extern crate graphics = "snowmew-graphics";
