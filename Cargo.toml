@@ -1,0 +1,20 @@
+[package]
+
+name = "snowmew-loader"
+version = "0.1.0"
+authors = [
+    "Colin Sherratt <colin.sherratt@gmail.com>",
+]
+
+[[lib]]
+name = "snowmew-loader"
+path = "lib.rs"
+
+[dependencies.stb_image]
+git = "https://github.com/servo/rust-stb-image.git"
+
+[dependencies.snowmew-core]
+path = "../snowmew-core/"
+
+[dependencies.snowmew-graphics]
+path = "../snowmew-graphics"

@@ -4,13 +4,14 @@
 #![comment = "An asset loader for snowmew"]
 
 extern crate debug;
-
-extern crate core;
-extern crate snowmew  = "snowmew-core";
-extern crate cgmath;
 extern crate collections;
-extern crate graphics = "snowmew-graphics";
+extern crate core;
+
+extern crate cgmath;
 extern crate image = "stb_image";
+
+extern crate snowmew  = "snowmew-core";
+extern crate graphics = "snowmew-graphics";
 
 pub use obj::Obj;
 
