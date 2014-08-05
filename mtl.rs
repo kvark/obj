@@ -6,17 +6,15 @@ use std::io::{File, Open, Read};
 use std::path::Path;
 use std::from_str::FromStr;
 
-use cgmath::vector::{Vector3};
-
 pub struct Material {
     pub name: String,
 
-    pub ka: Option<Vector3<f32>>,
-    pub kd: Option<Vector3<f32>>,
-    pub ks: Option<Vector3<f32>>,
-    pub ke: Option<Vector3<f32>>,
+    pub ka: Option<[f32, ..3]>,
+    pub kd: Option<[f32, ..3]>,
+    pub ks: Option<[f32, ..3]>,
+    pub ke: Option<[f32, ..3]>,
     pub km: Option<f32>,
-    pub tf: Option<Vector3<f32>>,
+    pub tf: Option<[f32, ..3]>,
     pub ns: Option<f32>,
     pub ni: Option<f32>,
     pub tr: Option<f32>,
@@ -60,7 +58,7 @@ impl Material {
     }
 }
 
-pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<Vector3<f32>> {
+pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32, ..3]> {
     let (x, y, z) = match (w.next(), w.next(), w.next()) {
         (Some(x), Some(y), Some(z)) => (x, y, z),
         other => {
@@ -74,7 +72,7 @@ pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<Vector3<f32>> {
     let z: Option<f32> = FromStr::from_str(z);
 
     match (x, y, z) {
-        (Some(x), Some(y), Some(z)) => Some(Vector3::new(x, y, z)),
+        (Some(x), Some(y), Some(z)) => Some([x, y, z]),
         other => {
             println!("invalid {}", other);
             None

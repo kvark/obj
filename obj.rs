@@ -12,8 +12,6 @@ use snowmew::common::Common;
 use graphics;
 use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNorm, Geometry};
 
-use cgmath::vector::{Vector3, Vector2};
-
 use mtl::Mtl;
 use texture::load_texture;
 
@@ -27,9 +25,9 @@ enum VertexType {
 
 pub struct Obj {
     path: Path,
-    vertices: Vec<Vector3<f32>>,
-    textures: Vec<Vector2<f32>>,
-    normals: Vec<Vector3<f32>>,
+    vertices: Vec<[f32, ..3]>,
+    textures: Vec<[f32, ..2]>,
+    normals: Vec<[f32, ..3]>,
     joined_vertices_map_p: HashMap<uint, uint>,
     joined_vertices_map_pn: HashMap<(uint, uint), uint>,
     joined_vertices_map_pt: HashMap<(uint, uint), uint>,
@@ -44,10 +42,6 @@ pub struct Obj {
     indices_ptn: Vec<uint>,
     objects: Vec<(String, Option<String>, uint, uint, Option<VertexType>)>,
     materials: Vec<Mtl>
-}
-
-fn lookup<'a, T: Clone>(s: &'a [T], idx: uint) -> T {
-    s[idx].clone()
 }
 
 fn normalize(idx: int, len: uint) -> uint {
@@ -90,7 +84,7 @@ impl Obj {
             }
         };
         let vertex = match (FromStr::from_str(v0), FromStr::from_str(v1), FromStr::from_str(v2)) {
-            (Some(v0), Some(v1), Some(v2)) => Vector3::new(v0, v1, v2),
+            (Some(v0), Some(v1), Some(v2)) => [v0, v1, v2],
             _ => {
                 fail!("could not parse line {} {} {}", v0, v1, v2);
             }
@@ -106,7 +100,7 @@ impl Obj {
             }
         };
         let texture = match (FromStr::from_str(t0), FromStr::from_str(t1)) {
-            (Some(t0), Some(t1)) => Vector2::new(t0, t1),
+            (Some(t0), Some(t1)) => [t0, t1],
             _ => {
                 fail!("could not parse line {} {}", t0, t1);
             }
@@ -122,7 +116,7 @@ impl Obj {
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
-            (Some(n0), Some(n1), Some(n2)) => Vector3::new(n0, n1, n2),
+            (Some(n0), Some(n1), Some(n2)) => [n0, n1, n2],
             _ => {
                 fail!("could not parse line {} {} {}", n0, n1, n2);
             }
@@ -451,13 +445,9 @@ impl Obj {
         let parent = db.new_object(Some(parent), "vertex_buffers");
 
         let vbo_p = if self.joined_vertices_p.len() != 0 {
-            println!("\tvbo_p i {} ix {}",
-                self.indices_p.len(),
-                self.joined_vertices_p.len(),
-            );
             let mut vertices = Vec::new();
             for &p in self.joined_vertices_p.iter() {
-                let p = lookup(self.vertices.as_slice(), p);
+                let p = self.vertices[p];
 
                 vertices.push( VertexGeo {
                     position: p
@@ -474,14 +464,10 @@ impl Obj {
         } else {None};
 
         let vbo_pt = if self.joined_vertices_pt.len() != 0 {
-            println!("\tvbo_pt i {} ix {}",
-                self.indices_pt.len(),
-                self.joined_vertices_pt.len(),
-            );
             let mut vertices = Vec::new();
             for &(p, t) in self.joined_vertices_pt.iter() {
-                let p = lookup(self.vertices.as_slice(), p);
-                let t = lookup(self.textures.as_slice(), t);
+                let p = self.vertices[p];
+                let t = self.textures[t];
 
                 vertices.push( VertexGeoTex {
                     position: p,
@@ -505,8 +491,8 @@ impl Obj {
             );
             let mut vertices = Vec::new();
             for &(p, n) in self.joined_vertices_pn.iter() {
-                let p = lookup(self.vertices.as_slice(), p);
-                let n = lookup(self.normals.as_slice(), n);
+                let p = self.vertices[p];
+                let n = self.normals[n];
 
                 vertices.push( VertexGeoNorm {
                     position: p,
@@ -530,9 +516,9 @@ impl Obj {
             );
             let mut vertices = Vec::new();
             for &(p, t, n) in self.joined_vertices_ptn.iter() {
-                let p = lookup(self.vertices.as_slice(), p);
-                let t = lookup(self.textures.as_slice(), t);
-                let n = lookup(self.normals.as_slice(), n);
+                let p = self.vertices[p];
+                let t = self.textures[t];
+                let n = self.normals[n];
 
                 vertices.push( VertexGeoTexNorm {
                     position: p,
