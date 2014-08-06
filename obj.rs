@@ -27,7 +27,7 @@ use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNor
 use mtl::Mtl;
 use texture::load_texture;
 
-#[deriving(PartialEq)]
+#[deriving(PartialEq, Show)]
 enum VertexType {
     VertexP,
     VertexPT,
@@ -361,7 +361,6 @@ impl Obj {
             };
             let first = words.next();
 
-
             match first {
                 Some("v") => {
                     let (v0, v1, v2) = (words.next(), words.next(), words.next());
@@ -399,13 +398,13 @@ impl Obj {
                     };
                 },
                 Some("o") | Some("g") => {
-                    match group {
+                    group = match group {
                         Some(val) => {
-                            group = None;
                             dat.objects.push(val);
+                            None
                         },
-                        None => ()
-                    }
+                        None => None
+                    };
 
                     match words.next() {
                         Some(name) => {
@@ -522,10 +521,6 @@ impl Obj {
         } else {None};
 
         let vbo_ptn = if self.joined_vertices_ptn.len() != 0 {
-            println!("\tvbo_ptn i {} ix {}",
-                self.indices_ptn.len(),
-                self.joined_vertices_ptn.len(),
-            );
             let mut vertices = Vec::new();
             for &(p, t, n) in self.joined_vertices_ptn.iter() {
                 let p = self.vertices[p];
@@ -626,7 +621,8 @@ impl Obj {
         let geometry = db.add_dir(Some(parent), "geometry");
         let objects = db.add_dir(Some(parent), "objects");
         for &(ref name, ref mat, start, len, vt) in self.objects.iter() {
-            println!("{} {}", name, mat);
+            println!("{}", mat);
+
             let vbo = match vt {
                 Some(VertexP) => vbo_p,
                 Some(VertexPN) => vbo_pn,
