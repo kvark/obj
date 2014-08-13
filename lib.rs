@@ -12,23 +12,15 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#![crate_name = "snowmew-loader"]
+#![crate_name = "obj-import-rs"]
 #![license = "ASL2"]
 #![crate_type = "lib"]
-#![comment = "An asset loader for snowmew"]
 
 extern crate debug;
 extern crate collections;
 extern crate core;
 
-extern crate cgmath;
-extern crate image = "stb_image";
-
-extern crate snowmew  = "snowmew-core";
-extern crate graphics = "snowmew-graphics";
-
-pub use obj::Obj;
+pub use obj::{ObjFile, VertexType};
 
 mod obj;
 mod mtl;
-mod texture;

@@ -19,23 +19,37 @@ use std::from_str::FromStr;
 
 use std::collections::HashMap;
 
-use snowmew;
-use snowmew::common::Common;
-use graphics;
-use graphics::geometry::{VertexGeo, VertexGeoTex, VertexGeoNorm, VertexGeoTexNorm, Geometry};
-
 use mtl::Mtl;
-use texture::load_texture;
 
 #[deriving(PartialEq, Show)]
-enum VertexType {
+pub enum VertexType {
     VertexP,
     VertexPT,
     VertexPN,
     VertexPTN,
 }
 
-pub struct Obj {
+pub struct Object {
+    name: String,
+    material: Option<String>,
+    start: uint,
+    length: uint,
+    vertex_type: VertexType
+}
+
+impl Object {
+    fn new(name: String) -> Object {
+        Object {
+            name: name,
+            material: None,
+            start: 0,
+            length: 0,
+            vertex_type: VertexP
+        }
+    }
+}
+
+pub struct ObjFile {
     path: Path,
     vertices: Vec<[f32, ..3]>,
     textures: Vec<[f32, ..2]>,
@@ -52,7 +66,7 @@ pub struct Obj {
     indices_pn: Vec<uint>,
     indices_pt: Vec<uint>,
     indices_ptn: Vec<uint>,
-    objects: Vec<(String, Option<String>, uint, uint, Option<VertexType>)>,
+    objects: Vec<Object>,
     materials: Vec<Mtl>
 }
 
@@ -64,9 +78,9 @@ fn normalize(idx: int, len: uint) -> uint {
     }
 }
 
-impl Obj {
-    fn new() -> Obj {
-        Obj {
+impl ObjFile {
+    fn new() -> ObjFile {
+        ObjFile {
             path: Path::new(""),
             vertices: Vec::new(),
             textures: Vec::new(),
@@ -339,22 +353,11 @@ impl Obj {
         }
     }
 
-    pub fn load(path: &Path) -> Option<Obj> {
-        let mut dat = Obj::new();
+    pub fn load<B: Buffer>(input: &mut B) -> ObjFile {
+        let mut dat = ObjFile::new();
+        let mut group: Option<Object> = None;
 
-        let mut file = match File::open_mode(path, Open, Read) {
-            Ok(file) => BufferedReader::new(file),
-            Err(err) => {
-                println!("{}", err);
-                return None
-            }
-        };
-
-        dat.path = path.clone();
-
-        let mut group: Option<(String, Option<String>, uint, uint, Option<VertexType>)> = None;
-
-        for (idx, line) in file.lines().enumerate() {
+        for (idx, line) in input.lines().enumerate() {
             let mut words = match line {
                 Ok(ref line) => line.as_slice().words(),
                 Err(err) => fail!("failed to readline {}", err)
@@ -384,18 +387,25 @@ impl Obj {
                         Ok((a, b, c)) => (a, b, c)
                     };
 
-                    group = match group {
+                    group = Some(match group {
                         None => {
-                            Some(("default".to_string(), None, start, size, None))
+                            let mut obj = Object::new("default".to_string());
+                            obj.vertex_type = vertex_type;
+                            obj.start = start;
+                            obj.length = size;
+                            obj
                         }
-                        Some((name, mat, 0, 0, _)) => {
-                            Some((name, mat, start, size, Some(vertex_type)))
+                        Some(mut obj) => {
+                            if obj.length == 0 {
+                                obj.vertex_type = vertex_type;
+                                obj.start = start;
+                                obj.length = size;
+                            } else {
+                                obj.length += size;
+                            }
+                            obj
                         }
-                        Some((name, mat, start, len, vt)) => {
-                            assert!(vt == Some(vertex_type));
-                            Some((name, mat, start, len+size, Some(vertex_type)))
-                        }
-                    };
+                    });
                 },
                 Some("o") | Some("g") => {
                     group = match group {
@@ -409,25 +419,31 @@ impl Obj {
                     match words.next() {
                         Some(name) => {
                             println!("Object {:s}", name);
-                            group = Some((name.to_string(), None, 0, 0, Some(VertexP)))
+                            group = Some(Object {
+                                name: name.to_string(),
+                                material: None,
+                                start: 0,
+                                length: 0,
+                                vertex_type: VertexP
+                            });
                         },
                         None => ()
                     }
                 },
-                Some("mtllib") => {
+                /*Some("mtllib") => {
                     let mut path = path.clone();
                     drop(path.pop());
                     let name = Path::new(words.next().expect("Failed to find name for mtllib"));
                     let path = path.join(name);
                     dat.materials.push(Mtl::load(&path).expect("Failed to load mtllib"));
-                }
+                }*/
                 Some("usemtl") => {
-                    group = group.map(|(name, _, start, len, vt)| {
-                        let mat = match words.next() {
+                    group = group.map(|mut obj| {
+                        obj.material = match words.next() {
                             Some(w) => Some(w.to_string()),
                             None => None
                         };
-                        (name, mat, start, len, vt)
+                        obj
                     });
                 }
                 Some("s") => (),
@@ -446,205 +462,66 @@ impl Obj {
             dat.objects.push(group.unwrap());
         }
 
-        Some(dat)
+        dat
     }
 
-    fn write_vbo(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) 
-            -> (Option<snowmew::ObjectKey>, Option<snowmew::ObjectKey>,
-                Option<snowmew::ObjectKey>, Option<snowmew::ObjectKey>) {
-        
-        let parent = db.new_object(Some(parent), "vertex_buffers");
+    pub fn vertex_position(&self)
+            -> (Vec<[f32, ..3]>, Vec<u32>) {
 
-        let vbo_p = if self.joined_vertices_p.len() != 0 {
-            let mut vertices = Vec::new();
-            for &p in self.joined_vertices_p.iter() {
-                let p = self.vertices[p];
+        let vertices = self.joined_vertices_p.iter()
+                                             .map(|&i| self.vertices[i])
+                                             .collect();
 
-                vertices.push( VertexGeo {
-                    position: p
-                });
-            }
+        let indices = self.indices_p.iter()
+                                    .map(|&i| i as u32)
+                                    .collect();
 
-            let mut indices = Vec::new();
-            for i in self.indices_p.iter() {
-                indices.push(*i as u32);
-            }
-
-            let vb = graphics::VertexBuffer::new_position(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "position", vb))
-        } else {None};
-
-        let vbo_pt = if self.joined_vertices_pt.len() != 0 {
-            let mut vertices = Vec::new();
-            for &(p, t) in self.joined_vertices_pt.iter() {
-                let p = self.vertices[p];
-                let t = self.textures[t];
-
-                vertices.push( VertexGeoTex {
-                    position: p,
-                    texture: t,
-                });
-            }
-
-            let mut indices = Vec::new();
-            for i in self.indices_pt.iter() {
-                indices.push(*i as u32);
-            }
-
-            let vb = graphics::VertexBuffer::new_position_texture(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "position_texture", vb))
-        } else {None};
-
-        let vbo_pn = if self.joined_vertices_pn.len() != 0 {
-            println!("\tvbo_pn i {} ix {}",
-                self.indices_pn.len(),
-                self.joined_vertices_pn.len(),
-            );
-            let mut vertices = Vec::new();
-            for &(p, n) in self.joined_vertices_pn.iter() {
-                let p = self.vertices[p];
-                let n = self.normals[n];
-
-                vertices.push( VertexGeoNorm {
-                    position: p,
-                    normal: n,
-                });
-            }
-
-            let mut indices = Vec::new();
-            for i in self.indices_pn.iter() {
-                indices.push(*i as u32);
-            }
-
-            let vb = graphics::VertexBuffer::new_position_normal(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "position_normal", vb))
-        } else {None};
-
-        let vbo_ptn = if self.joined_vertices_ptn.len() != 0 {
-            let mut vertices = Vec::new();
-            for &(p, t, n) in self.joined_vertices_ptn.iter() {
-                let p = self.vertices[p];
-                let t = self.textures[t];
-                let n = self.normals[n];
-
-                vertices.push( VertexGeoTexNorm {
-                    position: p,
-                    texture: t,
-                    normal: n
-                });
-            }
-
-            let mut indices = Vec::new();
-            for i in self.indices_ptn.iter() {
-                indices.push(*i as u32);
-            }
-
-            let vb = graphics::VertexBuffer::new_position_texture_normal(vertices, indices);
-            Some(db.new_vertex_buffer(parent, "position_texture_normal", vb))
-        } else {None};
-
-        (vbo_p, vbo_pt, vbo_pn, vbo_ptn)
+        (vertices, indices)
     }
 
-    fn write_textures(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics)
-            -> HashMap<String, snowmew::ObjectKey> {
-        let parent = db.new_object(Some(parent), "textures");
-        let mut map = HashMap::new();
-        for m_dir in self.materials.iter() {
-            for m in m_dir.materials.iter() {
-                let text = &[&m.map_ka, &m.map_kd, &m.map_ks, &m.map_ke];
-                for t in text.iter() {
-                    match *t {
-                        &None => (),
-                        &Some(ref t) => {
-                            let insert = map.find(t).is_none();
-                            if insert {
-                                let mut path = self.path.clone();
-                                drop(path.pop());
-                                let text = load_texture(&path.join(&Path::new(t.clone())));
-                                let id = db.new_texture(parent, t.as_slice(), text);
-                                map.insert(t.clone(), id);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        map
+    pub fn vertex_position_texture(&self)
+            -> (Vec<([f32, ..3], [f32, ..2])>, Vec<u32>) {
+
+        let vertices = self.joined_vertices_pt.iter()
+                                              .map(|&(p, t)| (self.vertices[p],
+                                                              self.textures[t]))
+                                              .collect();
+
+        let indices = self.indices_pt.iter()
+                                     .map(|&i| i as u32)
+                                     .collect();
+
+        (vertices, indices)
     }
 
-    fn write_materials(&self,
-                       parent: snowmew::ObjectKey,
-                       db: &mut graphics::Graphics,
-                       text: &HashMap<String, snowmew::ObjectKey>)
-            -> HashMap<String, snowmew::ObjectKey> {
+    pub fn vertex_position_normal(&self)
+            -> (Vec<([f32, ..3], [f32, ..3])>, Vec<u32>) {
 
-        let mut name_to_id = HashMap::new();
+        let vertices = self.joined_vertices_pn.iter()
+                                              .map(|&(p, n)| (self.vertices[p],
+                                                              self.normals[n]))
+                                              .collect();
 
-        let lookup = |name| {
-            *text.find(name).expect("texture not found")
-        };
+        let indices = self.indices_pn.iter()
+                                     .map(|&i| i as u32)
+                                     .collect();
 
-        let parent = db.new_object(Some(parent), "materials");
-        for m_dir in self.materials.iter() {
-            for m in m_dir.materials.iter() {
-                let mut mat = graphics::Material::new();
-                if m.ka.is_some() { mat.set_ka(*m.ka.as_ref().unwrap()); }
-                if m.kd.is_some() { mat.set_kd(*m.kd.as_ref().unwrap()); }
-                if m.ks.is_some() { mat.set_ks(*m.ks.as_ref().unwrap()); }
-            if m.ke.is_some() { mat.set_ke(*m.ke.as_ref().unwrap()); }
-                if m.ni.is_some() { mat.set_ni(*m.ni.as_ref().unwrap()); }
-                if m.ns.is_some() { mat.set_ns(*m.ns.as_ref().unwrap()); }
-                if m.map_ka.is_some() { mat.set_map_ka(lookup(m.map_ka.as_ref().unwrap())); }
-                if m.map_kd.is_some() { mat.set_map_kd(lookup(m.map_kd.as_ref().unwrap())); }
-                if m.map_ks.is_some() { mat.set_map_ks(lookup(m.map_ks.as_ref().unwrap())); }
-                if m.map_ke.is_some() { mat.set_map_ke(lookup(m.map_ke.as_ref().unwrap())); }
-                let id = db.new_material(parent, m.name.as_slice(), mat);
-                name_to_id.insert(m.name.clone(), id);
-            }
-        }
-
-        name_to_id
+        (vertices, indices)
     }
 
+    pub fn vertex_position_texture_normal(&self) 
+            -> (Vec<([f32, ..3], [f32, ..2], [f32, ..3])>, Vec<u32>) {
 
-    pub fn import(&self, parent: snowmew::ObjectKey, db: &mut graphics::Graphics) {
-        println!("v {} t {} n {}",
-            self.vertices.len(),
-            self.textures.len(),
-            self.normals.len()
-        );
+        let vertices = self.joined_vertices_ptn.iter()
+                                               .map(|&(p, t, n)| (self.vertices[p],
+                                                                  self.textures[t],
+                                                                  self.normals[n]))
+                                               .collect();
 
-        let textures = self.write_textures(parent, db);
-        let materials = self.write_materials(parent, db, &textures);
-        let (vbo_p, vbo_pt, vbo_pn, vbo_ptn) = self.write_vbo(parent, db);
-        let geometry = db.add_dir(Some(parent), "geometry");
-        let objects = db.add_dir(Some(parent), "objects");
-        for &(ref name, ref mat, start, len, vt) in self.objects.iter() {
-            println!("{}", mat);
+        let indices = self.indices_pn.iter()
+                                     .map(|&i| i as u32)
+                                     .collect();
 
-            let vbo = match vt {
-                Some(VertexP) => vbo_p,
-                Some(VertexPN) => vbo_pn,
-                Some(VertexPT) => vbo_pt,
-                Some(VertexPTN) => vbo_ptn,
-                None => None
-            };
-            match vbo {
-                None => (),
-                Some(vbo) => {
-                    let geo = db.new_geometry(geometry, name.as_slice(), Geometry::triangles(vbo, start, len));
-                    if mat.is_some() {
-                        let mat = materials.find(mat.as_ref().unwrap());
-                        if mat.is_some() {
-                            let obj = db.new_object(Some(objects), name.as_slice());
-                            db.set_draw(obj, geo, *mat.unwrap());
-                        }
-                    }
-                }
-            }
-
-        }
-
+        (vertices, indices)
     }
 }
