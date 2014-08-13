@@ -1,11 +1,11 @@
 [package]
 
-name = "obj-import-rs"
+name = "obj-rs"
 version = "0.1.0"
 authors = [
     "Colin Sherratt <colin.sherratt@gmail.com>",
 ]
 
 [[lib]]
-name = "obj-import-rs"
-path = "lib.rs"
+name = "obj-rs"
+path = "src/lib.rs"

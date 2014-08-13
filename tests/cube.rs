@@ -13,7 +13,7 @@
 //   limitations under the License.
 
 
-extern crate obj = "obj-import-rs";
+extern crate obj = "obj-rs";
 
 use obj::ObjFile;
 use std::io::BufReader;
