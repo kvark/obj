@@ -12,16 +12,16 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+use core::slice::Items;
 use std::io::BufferedReader;
 use std::io::{File, Open, Read};
 use std::path::Path;
 use std::from_str::FromStr;
-
 use std::collections::HashMap;
 
 use mtl::Mtl;
 
-#[deriving(PartialEq, Show)]
+#[deriving(PartialEq, Show, Clone)]
 pub enum VertexType {
     VertexP,
     VertexPT,
@@ -29,18 +29,41 @@ pub enum VertexType {
     VertexPTN,
 }
 
+#[deriving(Clone)]
 pub struct Object {
-    name: String,
-    material: Option<String>,
-    start: uint,
-    length: uint,
-    vertex_type: VertexType
+    pub name: String,
+    groups: Vec<Group>
+
 }
 
 impl Object {
     fn new(name: String) -> Object {
         Object {
             name: name,
+            groups: Vec::new()
+        }
+    }
+
+    pub fn group_iter<'a>(&'a self) -> Items<Group> {
+        self.groups.iter()
+    }
+}
+
+#[deriving(Clone)]
+pub struct Group {
+    pub name: String,
+    subgroup: uint,
+    material: Option<String>,
+    start: uint,
+    length: uint,
+    vertex_type: VertexType
+}
+
+impl Group {
+    fn new(name: String) -> Group {
+        Group {
+            name: name,
+            subgroup: 0,
             material: None,
             start: 0,
             length: 0,
@@ -67,7 +90,7 @@ pub struct ObjFile {
     indices_pt: Vec<uint>,
     indices_ptn: Vec<uint>,
     objects: Vec<Object>,
-    materials: Vec<Mtl>
+    materials: Vec<String>
 }
 
 fn normalize(idx: int, len: uint) -> uint {
@@ -355,11 +378,12 @@ impl ObjFile {
 
     pub fn load<B: Buffer>(input: &mut B) -> ObjFile {
         let mut dat = ObjFile::new();
-        let mut group: Option<Object> = None;
+        let mut object = Object::new("default".to_string());
+        let mut group: Option<Group> = None;
 
         for (idx, line) in input.lines().enumerate() {
-            let mut words = match line {
-                Ok(ref line) => line.as_slice().words(),
+            let (line, mut words) = match line {
+                Ok(ref line) => (line.as_slice(), line.as_slice().words()),
                 Err(err) => fail!("failed to readline {}", err)
             };
             let first = words.next();
@@ -389,7 +413,7 @@ impl ObjFile {
 
                     group = Some(match group {
                         None => {
-                            let mut obj = Object::new("default".to_string());
+                            let mut obj = Group::new("default".to_string());
                             obj.vertex_type = vertex_type;
                             obj.start = start;
                             obj.length = size;
@@ -407,36 +431,42 @@ impl ObjFile {
                         }
                     });
                 },
-                Some("o") | Some("g") => {
+                Some("o") => {
+                    if dat.objects.len() != 0 {
+                        dat.objects.push(object);
+                    }
+
+
+                    object = if line.len() > 2 {
+                        let name = line.slice_from(1).trim();
+                        Object::new(name.to_string())
+                    } else {
+                        Object::new("default".to_string())
+                    };
+
+                    object = match words.next() {
+                        Some(name) => Object::new(name.to_string()),
+                        None => Object::new("default".to_string())
+                    }                    
+                },
+                Some("g") => {
                     group = match group {
                         Some(val) => {
-                            dat.objects.push(val);
+                            object.groups.push(val);
                             None
                         },
                         None => None
                     };
 
-                    match words.next() {
-                        Some(name) => {
-                            println!("Object {:s}", name);
-                            group = Some(Object {
-                                name: name.to_string(),
-                                material: None,
-                                start: 0,
-                                length: 0,
-                                vertex_type: VertexP
-                            });
-                        },
-                        None => ()
+                    if line.len() > 2 {
+                        let name = line.slice_from(1).trim();
+                        group = Some(Group::new(name.to_string()));
                     }
                 },
-                /*Some("mtllib") => {
-                    let mut path = path.clone();
-                    drop(path.pop());
-                    let name = Path::new(words.next().expect("Failed to find name for mtllib"));
-                    let path = path.join(name);
-                    dat.materials.push(Mtl::load(&path).expect("Failed to load mtllib"));
-                }*/
+                Some("mtllib") => {
+                    let name = words.next().expect("Failed to find name for mtllib");
+                    dat.materials.push(name.to_string());
+                }
                 Some("usemtl") => {
                     group = group.map(|mut obj| {
                         obj.material = match words.next() {
@@ -457,11 +487,11 @@ impl ObjFile {
 
         }
 
-        if group.is_some() {
-            println!("group push {:?}", group);
-            dat.objects.push(group.unwrap());
+        match group {
+            Some(g) => object.groups.push(g),
+            None => ()
         }
-
+        dat.objects.push(object);
         dat
     }
 
@@ -523,5 +553,9 @@ impl ObjFile {
                                      .collect();
 
         (vertices, indices)
+    }
+
+    pub fn object_iter<'a>(&'a self) -> Items<Object> {
+        self.objects.iter()
     }
 }

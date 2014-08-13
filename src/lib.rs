@@ -20,7 +20,7 @@ extern crate debug;
 extern crate collections;
 extern crate core;
 
-pub use obj::{ObjFile, VertexType};
+pub use obj::{ObjFile, VertexType, Object};
 
 mod obj;
 mod mtl;
