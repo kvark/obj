@@ -9,3 +9,6 @@ authors = [
 [[lib]]
 name = "obj-rs"
 path = "src/lib.rs"
+
+[dependencies.vertex]
+git = "https://github.com/csherratt/vertex-rs.git"

@@ -38,7 +38,7 @@ fn test_load_square() {
     let mut reader = BufReader::new(square.as_bytes());
     let obj = ObjFile::load(&mut reader);
 
-    let (v, _) = obj.vertex_position();
+    let v = obj.position();
 
     for (a, b) in v.iter().zip(square_vbo.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
@@ -77,10 +77,10 @@ static cube_vbo: &'static [[f32, ..3]] = &[
     [0., 0., 1.],
     [1., 0., 1.],
     [1., 1., 1.],
-    [1., 1., 0.],
-    [1., 0., 0.],
+    [0., 1., 0.],
     [0., 0., 0.],
-    [0., 1., 0.]
+    [1., 0., 0.],
+    [1., 1., 0.],
 ];
 
 static cube_names: &'static [&'static str] = &[
@@ -98,7 +98,7 @@ fn test_load_cube() {
     let mut reader = BufReader::new(cube.as_bytes());
     let obj = ObjFile::load(&mut reader);
 
-    let (v, _) = obj.vertex_position();
+    let v = obj.position();
 
     for (a, b) in v.iter().zip(cube_vbo.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
@@ -111,6 +111,33 @@ fn test_load_cube() {
         }
     }
 }
+
+static cube_negative_vbo: &'static [[f32, ..3]] = &[
+    [0., 1., 1.],
+    [0., 0., 1.],
+    [1., 0., 1.],
+    [1., 1., 1.],
+    [1., 1., 0.],
+    [1., 0., 0.],
+    [0., 0., 0.],
+    [0., 1., 0.],
+    [1., 1., 1.],
+    [1., 0., 1.],
+    [1., 0., 0.],
+    [1., 1., 0.],
+    [0., 1., 0.],
+    [0., 1., 1.],
+    [1., 1., 1.],
+    [1., 1., 0.],
+    [0., 1., 0.],
+    [0., 0., 0.],
+    [0., 0., 1.],
+    [0., 1., 1.],
+    [0., 0., 1.],
+    [0., 0., 0.],
+    [1., 0., 0.],
+    [1., 0., 1.],
+];
 
 static cube_negative: &'static str = "
 v 0 1 1
@@ -155,9 +182,9 @@ fn test_load_cube_negative() {
     let mut reader = BufReader::new(cube_negative.as_bytes());
     let obj = ObjFile::load(&mut reader);
 
-    let (v, _) = obj.vertex_position();
+    let v = obj.position();
 
-    for (a, b) in v.iter().zip(cube_vbo.iter()) {
+    for (a, b) in v.iter().zip(cube_negative_vbo.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
     }
 }
