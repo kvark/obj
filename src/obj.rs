@@ -13,6 +13,7 @@
 //   limitations under the License.
 
 use core::slice::Items;
+use core::iter::Map;
 use std::io::BufferedReader;
 use std::io::{File, Open, Read};
 use std::path::Path;
@@ -20,7 +21,7 @@ use std::from_str::FromStr;
 use std::collections::HashMap;
 
 use mtl::Mtl;
-use vertex::{Triangle, Quad, Poly};
+use vertex::{Triangle, Quad, Polygon, Poly, PolyTri, PolyQuad};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
@@ -38,7 +39,7 @@ impl Object {
         }
     }
 
-    pub fn group_iter<'a>(&'a self) -> Items<Group> {
+    pub fn group_iter(&self) -> Items<Group> {
         self.groups.iter()
     }
 }
@@ -47,7 +48,7 @@ pub struct Group {
     pub name: String,
     subgroup: uint,
     material: Option<String>,
-    indices: Vec<Box<Poly<IndexTuple>>>
+    indices: Vec<Polygon<IndexTuple>>
 }
 
 impl Group {
@@ -191,13 +192,13 @@ impl ObjFile {
     }
 
     fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>)
-        -> Result<Box<Poly<IndexTuple>>, String>  {
+        -> Result<Polygon<IndexTuple>, String>  {
         match (g0, g1, g2, g3) {
             (Some(g0), Some(g1), Some(g2), None) => {
-                self.parse_triangle(g0, g1, g2).map(|x| box x as Box<Poly<IndexTuple>>)
+                self.parse_triangle(g0, g1, g2).map(|p| PolyTri(p))
             }
             (Some(g0), Some(g1), Some(g2), Some(g3)) => {
-                self.parse_quad(g0, g1, g2, g3).map(|x| box x as Box<Poly<IndexTuple>>)
+                self.parse_quad(g0, g1, g2, g3).map(|p| PolyQuad(p))
             }
             _ => {fail!("Unsupported");}
         }
