@@ -21,7 +21,7 @@ use std::from_str::FromStr;
 use std::collections::HashMap;
 
 use mtl::Mtl;
-use vertex::{Triangle, Quad, Polygon, Poly, PolyTri, PolyQuad};
+pub use vertex::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
@@ -32,7 +32,7 @@ pub struct Object {
 }
 
 impl Object {
-    fn new(name: String) -> Object {
+    pub fn new(name: String) -> Object {
         Object {
             name: name,
             groups: Vec::new()
@@ -52,13 +52,17 @@ pub struct Group {
 }
 
 impl Group {
-    fn new(name: String) -> Group {
+    pub fn new(name: String) -> Group {
         Group {
             name: name,
             subgroup: 0,
             material: None,
             indices: Vec::new()
         }
+    }
+
+    pub fn indices<'a>(&'a self) -> &'a [Polygon<IndexTuple>] {
+        self.indices.as_slice()
     }
 }
 

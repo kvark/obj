@@ -22,7 +22,7 @@ extern crate core;
 
 extern crate vertex;
 
-pub use obj::{ObjFile, Object};
+pub use obj::{ObjFile, Object, Group};
 
 mod obj;
 mod mtl;

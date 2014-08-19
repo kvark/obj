@@ -13,10 +13,13 @@
 //   limitations under the License.
 
 
+extern crate debug;
+extern crate vertex;
 extern crate obj = "obj-rs";
 
 use obj::ObjFile;
 use std::io::BufReader;
+use vertex::{PolygonGenerator, PolygonPipeline, Polygon};
 
 static square: &'static str = "
 v 0 1 0
@@ -43,6 +46,23 @@ fn test_load_square() {
     for (a, b) in v.iter().zip(square_vbo.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
     }
+
+    for o in obj.object_iter() {
+        for g in o.group_iter() {
+            let p: Vec<Polygon<([f32, .. 3],[f32, .. 2],[f32, .. 3])>> =
+                PolygonGenerator::new(g.indices().iter().map(|x| *x))
+                .vertex(|(p, t, n)| 
+                    (
+                        obj.position()[p],
+                        t.map_or([0., 0.], |t| obj.texture()[t]),
+                        n.map_or([1., 0., 0.,], |n| obj.normal()[n])
+                    )
+                )
+                .collect();
+            drop(p)
+        }
+    }
+
 }
 
 static cube: &'static str = "
