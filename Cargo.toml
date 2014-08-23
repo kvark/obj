@@ -10,5 +10,5 @@ authors = [
 name = "obj-rs"
 path = "src/lib.rs"
 
-[dependencies.vertex]
-git = "https://github.com/csherratt/vertex-rs.git"
+[dependencies.genmesh]
+git = "https://github.com/csherratt/genmesh.git"

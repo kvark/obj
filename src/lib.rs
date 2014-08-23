@@ -19,8 +19,7 @@
 extern crate debug;
 extern crate collections;
 extern crate core;
-
-extern crate vertex;
+extern crate genmesh;
 
 pub use obj::{ObjFile, Object, Group};
 

@@ -21,7 +21,7 @@ use std::from_str::FromStr;
 use std::collections::HashMap;
 
 use mtl::Mtl;
-pub use vertex::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
+pub use genmesh::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
