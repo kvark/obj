@@ -58,7 +58,7 @@ impl Group {
     }
 }
 
-pub struct ObjFile {
+pub struct Obj {
     position: Vec<[f32, ..3]>,
     texture: Vec<[f32, ..2]>,
     normal: Vec<[f32, ..3]>,
@@ -74,9 +74,9 @@ fn normalize(idx: int, len: uint) -> uint {
     }
 }
 
-impl ObjFile {
-    fn new() -> ObjFile {
-        ObjFile {
+impl Obj {
+    fn new() -> Obj {
+        Obj {
             position: Vec::new(),
             texture: Vec::new(),
             normal: Vec::new(),
@@ -198,8 +198,8 @@ impl ObjFile {
         }
     }
 
-    pub fn load<B: Buffer>(input: &mut B) -> ObjFile {
-        let mut dat = ObjFile::new();
+    pub fn load<B: Buffer>(input: &mut B) -> Obj {
+        let mut dat = Obj::new();
         let mut object = Object::new("default".to_string());
         let mut group: Option<Group> = None;
 

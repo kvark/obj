@@ -17,7 +17,7 @@ extern crate debug;
 extern crate genmesh;
 extern crate obj = "obj-rs";
 
-use obj::ObjFile;
+use obj::Obj;
 use std::io::BufReader;
 use genmesh::{MapToVertices, Polygon};
 
@@ -39,7 +39,7 @@ static square_vbo: &'static [[f32, ..3]] = &[
 #[test]
 fn test_load_square() {
     let mut reader = BufReader::new(square.as_bytes());
-    let obj = ObjFile::load(&mut reader);
+    let obj = Obj::load(&mut reader);
 
     let v = obj.position();
 
@@ -116,7 +116,7 @@ static cube_names: &'static [&'static str] = &[
 #[test]
 fn test_load_cube() {
     let mut reader = BufReader::new(cube.as_bytes());
-    let obj = ObjFile::load(&mut reader);
+    let obj = Obj::load(&mut reader);
 
     let v = obj.position();
 
@@ -200,7 +200,7 @@ f -4 -3 -2 -1
 #[test]
 fn test_load_cube_negative() {
     let mut reader = BufReader::new(cube_negative.as_bytes());
-    let obj = ObjFile::load(&mut reader);
+    let obj = Obj::load(&mut reader);
 
     let v = obj.position();
 
