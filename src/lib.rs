@@ -42,7 +42,7 @@ pub fn load(path: &Path) -> IoResult<Obj<Rc<Material>>> {
             let mut p = path.clone();
             p.pop();
             p.push(m.as_slice());
-            let file = File::open(path).ok().expect("failed to open material");
+            let file = File::open(&p).ok().expect("failed to open material");
             let mut f = BufferedReader::new(file);
             let m = Mtl::load(&mut f);
             for m in m.materials.move_iter() {
