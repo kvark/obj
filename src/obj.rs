@@ -13,14 +13,8 @@
 //   limitations under the License.
 
 use core::slice::Items;
-use core::iter::Map;
-use std::io::BufferedReader;
-use std::io::{File, Open, Read};
-use std::path::Path;
 use std::from_str::FromStr;
-use std::collections::HashMap;
 
-use mtl::Mtl;
 pub use genmesh::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
@@ -46,7 +40,6 @@ impl Object {
 
 pub struct Group {
     pub name: String,
-    subgroup: uint,
     material: Option<String>,
     indices: Vec<Polygon<IndexTuple>>
 }
@@ -55,7 +48,6 @@ impl Group {
     pub fn new(name: String) -> Group {
         Group {
             name: name,
-            subgroup: 0,
             material: None,
             indices: Vec::new()
         }
@@ -67,7 +59,6 @@ impl Group {
 }
 
 pub struct ObjFile {
-    path: Path,
     position: Vec<[f32, ..3]>,
     texture: Vec<[f32, ..2]>,
     normal: Vec<[f32, ..3]>,
@@ -86,7 +77,6 @@ fn normalize(idx: int, len: uint) -> uint {
 impl ObjFile {
     fn new() -> ObjFile {
         ObjFile {
-            path: Path::new(""),
             position: Vec::new(),
             texture: Vec::new(),
             normal: Vec::new(),
@@ -260,18 +250,13 @@ impl ObjFile {
                         dat.objects.push(object);
                     }
 
-
                     object = if line.len() > 2 {
                         let name = line.slice_from(1).trim();
                         Object::new(name.to_string())
                     } else {
                         Object::new("default".to_string())
                     };
-
-                    object = match words.next() {
-                        Some(name) => Object::new(name.to_string()),
-                        None => Object::new("default".to_string())
-                    }                    
+                 
                 },
                 Some("g") => {
                     group = match group {

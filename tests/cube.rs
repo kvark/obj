@@ -14,12 +14,12 @@
 
 
 extern crate debug;
-extern crate vertex;
+extern crate genmesh;
 extern crate obj = "obj-rs";
 
 use obj::ObjFile;
 use std::io::BufReader;
-use vertex::{PolygonGenerator, PolygonPipeline, Polygon};
+use genmesh::{MapToVertices, Polygon};
 
 static square: &'static str = "
 v 0 1 0
@@ -50,7 +50,7 @@ fn test_load_square() {
     for o in obj.object_iter() {
         for g in o.group_iter() {
             let p: Vec<Polygon<([f32, .. 3],[f32, .. 2],[f32, .. 3])>> =
-                PolygonGenerator::new(g.indices().iter().map(|x| *x))
+                g.indices().iter().map(|x| *x)
                 .vertex(|(p, t, n)| 
                     (
                         obj.position()[p],

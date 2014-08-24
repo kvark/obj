@@ -21,7 +21,8 @@ extern crate collections;
 extern crate core;
 extern crate genmesh;
 
-pub use obj::{ObjFile, Object, Group};
+pub use obj::{ObjFile, Object, Group, IndexTuple};
+pub use mtl::{Mtl, Material};
 
 mod obj;
 mod mtl;
