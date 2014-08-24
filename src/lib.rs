@@ -21,10 +21,53 @@ extern crate collections;
 extern crate core;
 extern crate genmesh;
 
+use std::io::{BufferedReader, File, IoResult};
+use std::collections::hashmap::HashMap;
+use std::rc::Rc;
+
 pub use obj::{Obj, Object, Group, IndexTuple};
 pub use mtl::{Mtl, Material};
-use std::io::IoResult;
 
 mod obj;
 mod mtl;
+
+pub fn load(path: &Path) -> IoResult<Obj<Rc<Material>>> {
+    File::open(path).map(|f| {
+        let mut f = BufferedReader::new(f);
+        let obj = Obj::load(&mut f);
+
+        let mut materials = HashMap::new();
+
+        for m in obj.materials().iter() {
+            let mut p = path.clone();
+            p.pop();
+            p.push(m.as_slice());
+            let file = File::open(path).ok().expect("failed to open material");
+            let mut f = BufferedReader::new(file);
+            let m = Mtl::load(&mut f);
+            for m in m.materials.move_iter() {
+                materials.insert(m.name.clone(), Rc::new(m));
+            }
+        }
+
+        obj.map(|g| {
+            let Group {
+                name: name,
+                material: material,
+                indices: indices
+            } = g;
+
+            let material: Option<Rc<Material>> = match material {
+                Some(m) => materials.find(&m).map(|m| m.clone()),
+                None => None
+            };
+
+            Group {
+                name: name,
+                material: material,
+                indices: indices
+            }
+        })
+    })
+}
 

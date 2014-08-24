@@ -19,33 +19,33 @@ pub use genmesh::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
-pub struct Object {
+pub struct Object<MTL> {
     pub name: String,
-    groups: Vec<Group>
+    groups: Vec<Group<MTL>>
 
 }
 
-impl Object {
-    pub fn new(name: String) -> Object {
+impl<MTL> Object<MTL> {
+    pub fn new(name: String) -> Object<MTL> {
         Object {
             name: name,
             groups: Vec::new()
         }
     }
 
-    pub fn group_iter(&self) -> Items<Group> {
+    pub fn group_iter(&self) -> Items<Group<MTL>> {
         self.groups.iter()
     }
 }
 
-pub struct Group {
+pub struct Group<MTL> {
     pub name: String,
-    material: Option<String>,
-    indices: Vec<Polygon<IndexTuple>>
+    pub material: Option<MTL>,
+    pub indices: Vec<Polygon<IndexTuple>>
 }
 
-impl Group {
-    pub fn new(name: String) -> Group {
+impl<MTL> Group<MTL> {
+    pub fn new(name: String) -> Group<MTL> {
         Group {
             name: name,
             material: None,
@@ -58,11 +58,11 @@ impl Group {
     }
 }
 
-pub struct Obj {
+pub struct Obj<MTL> {
     position: Vec<[f32, ..3]>,
     texture: Vec<[f32, ..2]>,
     normal: Vec<[f32, ..3]>,
-    objects: Vec<Object>,
+    objects: Vec<Object<MTL>>,
     materials: Vec<String>
 }
 
@@ -74,8 +74,8 @@ fn normalize(idx: int, len: uint) -> uint {
     }
 }
 
-impl Obj {
-    fn new() -> Obj {
+impl<MTL> Obj<MTL> {
+    fn new() -> Obj<MTL> {
         Obj {
             position: Vec::new(),
             texture: Vec::new(),
@@ -85,6 +85,63 @@ impl Obj {
         }
     }
 
+    pub fn object_iter<'a>(&'a self) -> Items<Object<MTL>> {
+        self.objects.iter()
+    }
+
+    pub fn position<'a>(&'a self) -> &'a [[f32, ..3]] {
+        self.position.as_slice()
+    }
+
+    pub fn texture<'a>(&'a self) -> &'a [[f32, ..2]] {
+        self.texture.as_slice()
+    }
+
+    pub fn normal<'a>(&'a self) -> &'a [[f32, ..3]] {
+        self.normal.as_slice()
+    }
+
+    pub fn materials<'a>(&'a self) -> &'a [String] {
+        self.materials.as_slice()
+    }
+
+    pub fn map<T>(self, f: |Group<MTL>| -> Group<T>) -> Obj<T> {
+        let Obj {
+            position: position,
+            texture: texture,
+            normal: normal,
+            objects: objects,
+            materials: materials
+        } = self;
+
+        let objects = objects.move_iter()
+            .map(|obj| {
+                let Object {
+                    name: name,
+                    groups: groups
+                } = obj;
+
+                let groups = groups.move_iter().map(|x| f(x)).collect();
+
+                Object {
+                    name: name,
+                    groups: groups
+                }
+
+            })
+            .collect();
+
+        Obj {
+            position: position,
+            texture: texture,
+            normal: normal,
+            objects: objects,
+            materials: materials
+        }
+    }
+}
+
+impl Obj<String> {
     fn parse_vertex(&mut self, v0: Option<&str>, v1: Option<&str>, v2: Option<&str>) {
         let (v0, v1, v2) = match (v0, v1, v2) {
             (Some(v0), Some(v1), Some(v2)) => (v0, v1, v2),
@@ -198,10 +255,10 @@ impl Obj {
         }
     }
 
-    pub fn load<B: Buffer>(input: &mut B) -> Obj {
+    pub fn load<B: Buffer>(input: &mut B) -> Obj<String> {
         let mut dat = Obj::new();
         let mut object = Object::new("default".to_string());
-        let mut group: Option<Group> = None;
+        let mut group: Option<Group<String>> = None;
 
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
@@ -302,21 +359,5 @@ impl Obj {
         }
         dat.objects.push(object);
         dat
-    }
-
-    pub fn object_iter<'a>(&'a self) -> Items<Object> {
-        self.objects.iter()
-    }
-
-    pub fn position<'a>(&'a self) -> &'a [[f32, ..3]] {
-        self.position.as_slice()
-    }
-
-    pub fn texture<'a>(&'a self) -> &'a [[f32, ..2]] {
-        self.texture.as_slice()
-    }
-
-    pub fn normal<'a>(&'a self) -> &'a [[f32, ..3]] {
-        self.normal.as_slice()
     }
 }
