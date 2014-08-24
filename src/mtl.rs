@@ -13,10 +13,6 @@
 //   limitations under the License.
 
 use std::str::Words;
-
-use std::io::BufferedReader;
-use std::io::{File, Open, Read};
-use std::path::Path;
 use std::from_str::FromStr;
 
 pub struct Material {
@@ -71,7 +67,7 @@ impl Material {
     }
 }
 
-pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32, ..3]> {
+fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32, ..3]> {
     let (x, y, z) = match (w.next(), w.next(), w.next()) {
         (Some(x), Some(y), Some(z)) => (x, y, z),
         other => {
@@ -93,7 +89,7 @@ pub fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32, ..3]> {
     }
 }
 
-pub fn to_int<'a>(w: &mut Words<'a>) -> Option<int> {
+fn to_int<'a>(w: &mut Words<'a>) -> Option<int> {
     let v = match w.next() {
         Some(v) => v,
         other => {
@@ -104,7 +100,7 @@ pub fn to_int<'a>(w: &mut Words<'a>) -> Option<int> {
     FromStr::from_str(v)
 }
 
-pub fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
+fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
     let v = match w.next() {
         Some(v) => v,
         other => {
@@ -115,7 +111,7 @@ pub fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
     FromStr::from_str(v)
 }
 
-pub fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
+fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
     match w.last() {
         Some(v) => Some(v.to_string()),
         other => {
@@ -136,16 +132,7 @@ impl Mtl {
         }
     }
 
-    pub fn load(path: &Path) -> Option<Mtl> {
-        println!("path {}", path.as_str());
-        let mut file = match File::open_mode(path, Open, Read) {
-            Ok(file) => BufferedReader::new(file),
-            Err(err) => {
-                println!("{}", err);
-                return None
-            }
-        };
-
+    pub fn load<B: Buffer>(file: &mut B) -> Mtl {
         let mut mtl = Mtl::new();
         let mut material = None;
         for line in file.lines() {
@@ -276,6 +263,6 @@ impl Mtl {
             mtl.materials.push(material.take().unwrap());
         }
 
-        Some(mtl)
+        mtl
     }
 }
