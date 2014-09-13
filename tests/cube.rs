@@ -15,7 +15,7 @@
 
 extern crate debug;
 extern crate genmesh;
-extern crate obj = "obj-rs";
+extern crate "obj-rs" as obj;
 
 use obj::Obj;
 use std::io::BufReader;
