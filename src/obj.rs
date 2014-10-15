@@ -303,9 +303,15 @@ impl Obj<String> {
                     });
                 },
                 Some("o") => {
-                    if dat.objects.len() != 0 {
-                        dat.objects.push(object);
-                    }
+                    group = match group {
+                        Some(val) => {
+                            object.groups.push(val);
+                            dat.objects.push(object);
+                            None
+                        },
+                        None => None
+                    };
+                    
 
                     object = if line.len() > 2 {
                         let name = line.slice_from(1).trim();
