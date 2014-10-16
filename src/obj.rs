@@ -19,6 +19,7 @@ pub use genmesh::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
+#[deriving(Show)]
 pub struct Object<MTL> {
     pub name: String,
     groups: Vec<Group<MTL>>
@@ -38,6 +39,7 @@ impl<MTL> Object<MTL> {
     }
 }
 
+#[deriving(Show)]
 pub struct Group<MTL> {
     pub name: String,
     pub material: Option<MTL>,
@@ -114,14 +116,14 @@ impl<MTL> Obj<MTL> {
             materials: materials
         } = self;
 
-        let objects = objects.move_iter()
+        let objects = objects.into_iter()
             .map(|obj| {
                 let Object {
                     name: name,
                     groups: groups
                 } = obj;
 
-                let groups = groups.move_iter().map(|x| f(x)).collect();
+                let groups = groups.into_iter().map(|x| f(x)).collect();
 
                 Object {
                     name: name,
@@ -340,13 +342,17 @@ impl Obj<String> {
                     dat.materials.push(name.to_string());
                 }
                 Some("usemtl") => {
-                    group = group.map(|mut obj| {
-                        obj.material = match words.next() {
-                            Some(w) => Some(w.to_string()),
-                            None => None
-                        };
-                        obj
-                    });
+                    let mut g = match group {
+                        Some(g) => g,
+                        None => Group::new("default".to_string())
+                    };
+
+                    g.material = match words.next() {
+                        Some(w) => Some(w.to_string()),
+                        None => None
+                    };
+
+                    group = Some(g);
                 }
                 Some("s") => (),
                 Some(other) => {
