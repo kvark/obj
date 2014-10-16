@@ -45,7 +45,7 @@ pub fn load(path: &Path) -> IoResult<Obj<Rc<Material>>> {
             let file = File::open(&p).ok().expect("failed to open material");
             let mut f = BufferedReader::new(file);
             let m = Mtl::load(&mut f);
-            for m in m.materials.move_iter() {
+            for m in m.materials.into_iter() {
                 materials.insert(m.name.clone(), Rc::new(m));
             }
         }
