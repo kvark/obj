@@ -16,7 +16,6 @@
 #![license = "ASL2"]
 #![crate_type = "lib"]
 
-extern crate debug;
 extern crate collections;
 extern crate core;
 extern crate genmesh;

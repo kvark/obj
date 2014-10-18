@@ -13,7 +13,6 @@
 //   limitations under the License.
 
 
-extern crate debug;
 extern crate genmesh;
 extern crate "obj-rs" as obj;
 
