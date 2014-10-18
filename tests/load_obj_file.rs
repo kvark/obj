@@ -13,11 +13,10 @@
 //   limitations under the License.
 
 
-extern crate debug;
 extern crate genmesh;
 extern crate "obj-rs" as obj;
 
 #[test]
 fn load_test_file() {
-    let file = obj::load(&Path::new("test_assets/sponza.obj"));
+    let _ = obj::load(&Path::new("test_assets/sponza.obj"));
 }
