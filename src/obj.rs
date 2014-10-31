@@ -109,18 +109,18 @@ impl<MTL> Obj<MTL> {
 
     pub fn map<T>(self, f: |Group<MTL>| -> Group<T>) -> Obj<T> {
         let Obj {
-            position: position,
-            texture: texture,
-            normal: normal,
-            objects: objects,
-            materials: materials
+            position,
+            texture,
+            normal,
+            objects,
+            materials
         } = self;
 
         let objects = objects.into_iter()
             .map(|obj| {
                 let Object {
-                    name: name,
-                    groups: groups
+                    name,
+                    groups
                 } = obj;
 
                 let groups = groups.into_iter().map(|x| f(x)).collect();
@@ -148,13 +148,13 @@ impl Obj<String> {
         let (v0, v1, v2) = match (v0, v1, v2) {
             (Some(v0), Some(v1), Some(v2)) => (v0, v1, v2),
             _ => {
-                fail!("could not parse line {} {} {}", v0, v1, v2);
+                panic!("could not parse line {} {} {}", v0, v1, v2);
             }
         };
         let vertex = match (FromStr::from_str(v0), FromStr::from_str(v1), FromStr::from_str(v2)) {
             (Some(v0), Some(v1), Some(v2)) => [v0, v1, v2],
             _ => {
-                fail!("could not parse line {} {} {}", v0, v1, v2);
+                panic!("could not parse line {} {} {}", v0, v1, v2);
             }
         };
         self.position.push(vertex);
@@ -164,13 +164,13 @@ impl Obj<String> {
         let (t0, t1) = match (t0, t1) {
             (Some(t0), Some(t1)) => (t0, t1),
             _ => {
-                fail!("could not parse line {} {}", t0, t1);
+                panic!("could not parse line {} {}", t0, t1);
             }
         };
         let texture = match (FromStr::from_str(t0), FromStr::from_str(t1)) {
             (Some(t0), Some(t1)) => [t0, t1],
             _ => {
-                fail!("could not parse line {} {}", t0, t1);
+                panic!("could not parse line {} {}", t0, t1);
             }
         };
         self.texture.push(texture);
@@ -180,13 +180,13 @@ impl Obj<String> {
         let (n0, n1, n2) = match (n0, n1, n2) {
             (Some(n0), Some(n1), Some(n2)) => (n0, n1, n2),
             _ => {
-                fail!("could not parse line {} {} {}", n0, n1, n2);
+                panic!("could not parse line {} {} {}", n0, n1, n2);
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
             (Some(n0), Some(n1), Some(n2)) => [n0, n1, n2],
             _ => {
-                fail!("could not parse line {} {} {}", n0, n1, n2);
+                panic!("could not parse line {} {} {}", n0, n1, n2);
             }
         };
         self.normal.push(normal);
@@ -253,7 +253,7 @@ impl Obj<String> {
             (Some(g0), Some(g1), Some(g2), Some(g3)) => {
                 self.parse_quad(g0, g1, g2, g3).map(|p| PolyQuad(p))
             }
-            _ => {fail!("Unsupported");}
+            _ => {panic!("Unsupported");}
         }
     }
 
@@ -265,7 +265,7 @@ impl Obj<String> {
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
                 Ok(ref line) => (line.as_slice(), line.as_slice().words()),
-                Err(err) => fail!("failed to readline {}", err)
+                Err(err) => panic!("failed to readline {}", err)
             };
             let first = words.next();
 
@@ -286,7 +286,7 @@ impl Obj<String> {
                     let (g0, g1, g2, g3) = (words.next(), words.next(), words.next(), words.next());
 
                     let poly= match dat.parse_face(g0, g1, g2, g3) {
-                        Err(e) => fail!("Could not parse line: {}\nline: {}: {}",
+                        Err(e) => panic!("Could not parse line: {}\nline: {}: {}",
                             e, idx, line
                         ),
                         Ok(poly) => poly
@@ -357,7 +357,7 @@ impl Obj<String> {
                 Some("s") => (),
                 Some(other) => {
                     if other.len() != 0 && other.char_at(0) != "#".char_at(0) {
-                        fail!("Invalid token {} {}", other, words.next());
+                        panic!("Invalid token {} {}", other, words.next());
                     }
                 }
                 None => (),

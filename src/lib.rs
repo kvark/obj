@@ -51,9 +51,9 @@ pub fn load(path: &Path) -> IoResult<Obj<Rc<Material>>> {
 
         obj.map(|g| {
             let Group {
-                name: name,
-                material: material,
-                indices: indices
+                name,
+                material,
+                indices
             } = g;
 
             let material: Option<Rc<Material>> = match material {

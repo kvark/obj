@@ -20,7 +20,7 @@ use obj::Obj;
 use std::io::BufReader;
 use genmesh::{MapToVertices, Polygon};
 
-static square: &'static str = "
+static SQUARE: &'static str = "
 v 0 1 0
 v 0 0 0
 v 1 0 0
@@ -28,7 +28,7 @@ v 1 1 0
 f 1 2 3 4
 ";
 
-static square_vbo: &'static [[f32, ..3]] = &[
+static SQUARE_VBO: &'static [[f32, ..3]] = &[
     [0., 1., 0.],
     [0., 0., 0.],
     [1., 0., 0.],
@@ -37,12 +37,12 @@ static square_vbo: &'static [[f32, ..3]] = &[
 
 #[test]
 fn test_load_square() {
-    let mut reader = BufReader::new(square.as_bytes());
+    let mut reader = BufReader::new(SQUARE.as_bytes());
     let obj = Obj::load(&mut reader);
 
     let v = obj.position();
 
-    for (a, b) in v.iter().zip(square_vbo.iter()) {
+    for (a, b) in v.iter().zip(SQUARE_VBO.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
     }
 
@@ -64,7 +64,7 @@ fn test_load_square() {
 
 }
 
-static cube: &'static str = "
+static CUBE: &'static str = "
 v 0 1 1
 v 0 0 1
 v 1 0 1
@@ -91,7 +91,7 @@ f 2 6 7 3
 # 6 elements
 ";
 
-static cube_vbo: &'static [[f32, ..3]] = &[
+static CUBE_VBO: &'static [[f32, ..3]] = &[
     [0., 1., 1.],
     [0., 0., 1.],
     [1., 0., 1.],
@@ -102,7 +102,7 @@ static cube_vbo: &'static [[f32, ..3]] = &[
     [1., 1., 0.],
 ];
 
-static cube_names: &'static [&'static str] = &[
+static CUBE_NAMES: &'static [&'static str] = &[
     "front cube",
     "back cube",
     "right cube",
@@ -114,24 +114,24 @@ static cube_names: &'static [&'static str] = &[
 
 #[test]
 fn test_load_cube() {
-    let mut reader = BufReader::new(cube.as_bytes());
+    let mut reader = BufReader::new(CUBE.as_bytes());
     let obj = Obj::load(&mut reader);
 
     let v = obj.position();
 
-    for (a, b) in v.iter().zip(cube_vbo.iter()) {
+    for (a, b) in v.iter().zip(CUBE_VBO.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
     }
 
     for obj in obj.object_iter() {
         assert_eq!(obj.name.as_slice(), "cube");
-        for (g, &name) in obj.group_iter().zip(cube_names.iter()) {
+        for (g, &name) in obj.group_iter().zip(CUBE_NAMES.iter()) {
             assert_eq!(name, g.name.as_slice());
         }
     }
 }
 
-static cube_negative_vbo: &'static [[f32, ..3]] = &[
+static CUBE_NEGATIVE_VBO: &'static [[f32, ..3]] = &[
     [0., 1., 1.],
     [0., 0., 1.],
     [1., 0., 1.],
@@ -158,7 +158,7 @@ static cube_negative_vbo: &'static [[f32, ..3]] = &[
     [1., 0., 1.],
 ];
 
-static cube_negative: &'static str = "
+static CUBE_NEGATIVE: &'static str = "
 v 0 1 1
 v 0 0 1
 v 1 0 1
@@ -198,12 +198,12 @@ f -4 -3 -2 -1
 
 #[test]
 fn test_load_cube_negative() {
-    let mut reader = BufReader::new(cube_negative.as_bytes());
+    let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
     let obj = Obj::load(&mut reader);
 
     let v = obj.position();
 
-    for (a, b) in v.iter().zip(cube_negative_vbo.iter()) {
+    for (a, b) in v.iter().zip(CUBE_NEGATIVE_VBO.iter()) {
         assert_eq!(a.as_slice(), b.as_slice());
     }
 }

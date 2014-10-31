@@ -138,7 +138,7 @@ impl Mtl {
         for line in file.lines() {
             let mut words = match line {
                 Ok(ref line) => line.as_slice().words(),
-                Err(err) => fail!("failed to readline {}", err)
+                Err(err) => panic!("failed to readline {}", err)
             };
             let first = words.next();
             match first {
@@ -254,7 +254,7 @@ impl Mtl {
                 }
                 Some("#") | None => {},
                 other => {
-                    fail!("unhandled mtl: {}", other);
+                    panic!("unhandled mtl: {}", other);
                 }
             }
         }
