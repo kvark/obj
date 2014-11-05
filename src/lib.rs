@@ -21,7 +21,7 @@ extern crate core;
 extern crate genmesh;
 
 use std::io::{BufferedReader, File, IoResult};
-use std::collections::hashmap::HashMap;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub use obj::{Obj, Object, Group, IndexTuple};
