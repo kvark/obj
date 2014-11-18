@@ -13,7 +13,7 @@
 //   limitations under the License.
 
 use core::slice::Items;
-use std::from_str::FromStr;
+use std::str::FromStr;
 
 pub use genmesh::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
 

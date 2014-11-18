@@ -13,7 +13,7 @@
 //   limitations under the License.
 
 use std::str::Words;
-use std::from_str::FromStr;
+use std::str::FromStr;
 
 pub struct Material {
     pub name: String,

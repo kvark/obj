@@ -57,7 +57,7 @@ pub fn load(path: &Path) -> IoResult<Obj<Rc<Material>>> {
             } = g;
 
             let material: Option<Rc<Material>> = match material {
-                Some(m) => materials.find(&m).map(|m| m.clone()),
+                Some(m) => materials.get(&m).map(|m| m.clone()),
                 None => None
             };
 
