@@ -6,9 +6,19 @@ authors = [
     "Colin Sherratt <colin.sherratt@gmail.com>",
 ]
 
+license = "Apache-2.0"
+description = "A package for loading Wavefront .obj files"
+homepage = "https://github.com/csherratt/obj"
+repository = "https://github.com/csherratt/obj"
+
+exclude = [
+    "test_assets/*",
+    "tests/load_obj_file.rs"
+]
+
 [lib]
 name = "obj"
 path = "src/lib.rs"
 
 [dependencies]
-genmesh = "*"
+genmesh = "~0.0.1"
