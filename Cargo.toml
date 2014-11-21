@@ -1,14 +1,14 @@
 [package]
 
-name = "obj-rs"
-version = "0.1.0"
+name = "obj"
+version = "0.0.1"
 authors = [
     "Colin Sherratt <colin.sherratt@gmail.com>",
 ]
 
 [lib]
-name = "obj-rs"
+name = "obj"
 path = "src/lib.rs"
 
-[dependencies.genmesh]
-git = "https://github.com/csherratt/genmesh.git"
+[dependencies]
+genmesh = "*"

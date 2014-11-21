@@ -15,7 +15,7 @@
 use core::slice::Items;
 use std::str::FromStr;
 
-pub use genmesh::{Triangle, Quad, Polygon, PolyTri, PolyQuad};
+pub use genmesh::{Triangle, Quad, Polygon};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
@@ -192,7 +192,7 @@ impl Obj<String> {
         self.normal.push(normal);
     }
 
-    fn parse_group(&mut self, group: &str) 
+    fn parse_group(&mut self, group: &str)
             -> Result<(uint, Option<uint>, Option<uint>), String> {
         let mut group_split = group.split('/');
         let p: Option<int> = group_split.next().and_then(|idx| FromStr::from_str(idx));
@@ -204,11 +204,11 @@ impl Obj<String> {
                                    v.map(|v| normalize(v, self.texture.len())),
                                    n.map(|n| normalize(n, self.normal.len()))
                                  )),
-            _ => Err(format!("poorly formed group {:s}", group))
+            _ => Err(format!("poorly formed group {}", group))
         }
     }
 
-    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str) 
+    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str)
             -> Result<Triangle<IndexTuple>, String> {
         let g0 = self.parse_group(g0);
         let g1 = self.parse_group(g1);
@@ -222,10 +222,9 @@ impl Obj<String> {
                 Ok(Triangle::new(g0, g1, g2))
             }
         }
-       
     }
 
-    fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str) 
+    fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str)
             -> Result<Quad<IndexTuple>, String> {
 
         let g0 = self.parse_group(g0);
@@ -248,10 +247,10 @@ impl Obj<String> {
         -> Result<Polygon<IndexTuple>, String>  {
         match (g0, g1, g2, g3) {
             (Some(g0), Some(g1), Some(g2), None) => {
-                self.parse_triangle(g0, g1, g2).map(|p| PolyTri(p))
+                self.parse_triangle(g0, g1, g2).map(|p| Polygon::PolyTri(p))
             }
             (Some(g0), Some(g1), Some(g2), Some(g3)) => {
-                self.parse_quad(g0, g1, g2, g3).map(|p| PolyQuad(p))
+                self.parse_quad(g0, g1, g2, g3).map(|p| Polygon::PolyQuad(p))
             }
             _ => {panic!("Unsupported");}
         }
