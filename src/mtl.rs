@@ -112,7 +112,7 @@ fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
 }
 
 fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
-    match w.last() {
+    match w.by_ref().last() {
         Some(v) => Some(v.to_string()),
         other => {
             println!("invalid {}", other);
