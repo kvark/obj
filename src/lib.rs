@@ -13,7 +13,6 @@
 //   limitations under the License.
 
 #![crate_name = "obj"]
-#![license = "ASL2"]
 #![crate_type = "lib"]
 
 extern crate collections;

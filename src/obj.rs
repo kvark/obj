@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-use core::slice::Items;
+use core::slice::Iter;
 use std::str::FromStr;
 
 pub use genmesh::{Triangle, Quad, Polygon};
@@ -34,7 +34,7 @@ impl<MTL> Object<MTL> {
         }
     }
 
-    pub fn group_iter(&self) -> Items<Group<MTL>> {
+    pub fn group_iter(&self) -> Iter<Group<MTL>> {
         self.groups.iter()
     }
 }
@@ -87,7 +87,7 @@ impl<MTL> Obj<MTL> {
         }
     }
 
-    pub fn object_iter<'a>(&'a self) -> Items<Object<MTL>> {
+    pub fn object_iter<'a>(&'a self) -> Iter<Object<MTL>> {
         self.objects.iter()
     }
 
