@@ -18,12 +18,12 @@ use std::str::FromStr;
 pub struct Material {
     pub name: String,
 
-    pub ka: Option<[f32, ..3]>,
-    pub kd: Option<[f32, ..3]>,
-    pub ks: Option<[f32, ..3]>,
-    pub ke: Option<[f32, ..3]>,
+    pub ka: Option<[f32; 3]>,
+    pub kd: Option<[f32; 3]>,
+    pub ks: Option<[f32; 3]>,
+    pub ke: Option<[f32; 3]>,
     pub km: Option<f32>,
-    pub tf: Option<[f32, ..3]>,
+    pub tf: Option<[f32; 3]>,
     pub ns: Option<f32>,
     pub ni: Option<f32>,
     pub tr: Option<f32>,
@@ -67,7 +67,7 @@ impl Material {
     }
 }
 
-fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32, ..3]> {
+fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32; 3]> {
     let (x, y, z) = match (w.next(), w.next(), w.next()) {
         (Some(x), Some(y), Some(z)) => (x, y, z),
         other => {

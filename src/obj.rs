@@ -19,7 +19,7 @@ pub use genmesh::{Triangle, Quad, Polygon};
 
 pub type IndexTuple = (uint, Option<uint>, Option<uint>);
 
-#[deriving(Show)]
+#[derive(Show)]
 pub struct Object<MTL> {
     pub name: String,
     groups: Vec<Group<MTL>>
@@ -39,7 +39,7 @@ impl<MTL> Object<MTL> {
     }
 }
 
-#[deriving(Show)]
+#[derive(Show)]
 pub struct Group<MTL> {
     pub name: String,
     pub material: Option<MTL>,
@@ -61,9 +61,9 @@ impl<MTL> Group<MTL> {
 }
 
 pub struct Obj<MTL> {
-    position: Vec<[f32, ..3]>,
-    texture: Vec<[f32, ..2]>,
-    normal: Vec<[f32, ..3]>,
+    position: Vec<[f32; 3]>,
+    texture: Vec<[f32; 2]>,
+    normal: Vec<[f32; 3]>,
     objects: Vec<Object<MTL>>,
     materials: Vec<String>
 }
@@ -91,15 +91,15 @@ impl<MTL> Obj<MTL> {
         self.objects.iter()
     }
 
-    pub fn position<'a>(&'a self) -> &'a [[f32, ..3]] {
+    pub fn position<'a>(&'a self) -> &'a [[f32; 3]] {
         self.position.as_slice()
     }
 
-    pub fn texture<'a>(&'a self) -> &'a [[f32, ..2]] {
+    pub fn texture<'a>(&'a self) -> &'a [[f32; 2]] {
         self.texture.as_slice()
     }
 
-    pub fn normal<'a>(&'a self) -> &'a [[f32, ..3]] {
+    pub fn normal<'a>(&'a self) -> &'a [[f32; 3]] {
         self.normal.as_slice()
     }
 
