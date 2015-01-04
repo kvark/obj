@@ -28,7 +28,7 @@ v 1 1 0
 f 1 2 3 4
 ";
 
-static SQUARE_VBO: &'static [[f32, ..3]] = &[
+static SQUARE_VBO: &'static [[f32; 3]] = &[
     [0., 1., 0.],
     [0., 0., 0.],
     [1., 0., 0.],
@@ -48,7 +48,7 @@ fn test_load_square() {
 
     for o in obj.object_iter() {
         for g in o.group_iter() {
-            let p: Vec<Polygon<([f32, .. 3],[f32, .. 2],[f32, .. 3])>> =
+            let p: Vec<Polygon<([f32;  3],[f32;  2],[f32;  3])>> =
                 g.indices().iter().map(|x| *x)
                 .vertex(|(p, t, n)| 
                     (
@@ -91,7 +91,7 @@ f 2 6 7 3
 # 6 elements
 ";
 
-static CUBE_VBO: &'static [[f32, ..3]] = &[
+static CUBE_VBO: &'static [[f32; 3]] = &[
     [0., 1., 1.],
     [0., 0., 1.],
     [1., 0., 1.],
@@ -131,7 +131,7 @@ fn test_load_cube() {
     }
 }
 
-static CUBE_NEGATIVE_VBO: &'static [[f32, ..3]] = &[
+static CUBE_NEGATIVE_VBO: &'static [[f32; 3]] = &[
     [0., 1., 1.],
     [0., 0., 1.],
     [1., 0., 1.],
