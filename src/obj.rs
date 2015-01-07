@@ -107,7 +107,7 @@ impl<MTL> Obj<MTL> {
         self.materials.as_slice()
     }
 
-    pub fn map<T>(self, f: |Group<MTL>| -> Group<T>) -> Obj<T> {
+    pub fn map<T, F>(self, mut f: F) -> Obj<T> where F: FnMut(Group<MTL>) -> Group<T> {
         let Obj {
             position,
             texture,
