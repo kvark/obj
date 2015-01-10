@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 pub use genmesh::{Triangle, Quad, Polygon};
 
-pub type IndexTuple = (uint, Option<uint>, Option<uint>);
+pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
 #[derive(Show)]
 pub struct Object<MTL> {
@@ -68,11 +68,11 @@ pub struct Obj<MTL> {
     materials: Vec<String>
 }
 
-fn normalize(idx: int, len: uint) -> uint {
+fn normalize(idx: isize, len: usize) -> usize {
     if idx < 0 {
-        (len as int + idx) as uint
+        (len as isize + idx) as usize
     } else {
-        idx as uint - 1
+        idx as usize - 1
     }
 }
 
@@ -193,11 +193,11 @@ impl Obj<String> {
     }
 
     fn parse_group(&mut self, group: &str)
-            -> Result<(uint, Option<uint>, Option<uint>), String> {
+            -> Result<(usize, Option<usize>, Option<usize>), String> {
         let mut group_split = group.split('/');
-        let p: Option<int> = group_split.next().and_then(|idx| FromStr::from_str(idx));
-        let t: Option<int> = group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx) } else { None } );
-        let n: Option<int> = group_split.next().and_then(|idx| FromStr::from_str(idx));
+        let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx));
+        let t: Option<isize> = group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx) } else { None } );
+        let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx));
 
         match (p, t, n) {
             (Some(p), v, n) => Ok((normalize(p, self.position.len()),

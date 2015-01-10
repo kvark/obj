@@ -28,7 +28,7 @@ pub struct Material {
     pub ni: Option<f32>,
     pub tr: Option<f32>,
     pub d: Option<f32>,
-    pub illum: Option<int>,
+    pub illum: Option<i32>,
 
     pub map_ka:   Option<String>,
     pub map_kd:   Option<String>,
@@ -89,7 +89,7 @@ fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32; 3]> {
     }
 }
 
-fn to_int<'a>(w: &mut Words<'a>) -> Option<int> {
+fn to_i32<'a>(w: &mut Words<'a>) -> Option<i32> {
     let v = match w.next() {
         Some(v) => v,
         other => {
@@ -212,7 +212,7 @@ impl Mtl {
                 }
                 Some("illum") => {
                     match material {
-                        Some(ref mut m) => { m.illum = to_int(&mut words); }
+                        Some(ref mut m) => { m.illum = to_i32(&mut words); }
                         None => ()
                     }
                 }
