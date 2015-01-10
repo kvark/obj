@@ -71,7 +71,7 @@ fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32; 3]> {
     let (x, y, z) = match (w.next(), w.next(), w.next()) {
         (Some(x), Some(y), Some(z)) => (x, y, z),
         other => {
-            println!("invalid {}", other);
+            println!("invalid {:?}", other);
             return None;
         }
     };
@@ -83,7 +83,7 @@ fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32; 3]> {
     match (x, y, z) {
         (Some(x), Some(y), Some(z)) => Some([x, y, z]),
         other => {
-            println!("invalid {}", other);
+            println!("invalid {:?}", other);
             None
         }
     }
@@ -93,7 +93,7 @@ fn to_int<'a>(w: &mut Words<'a>) -> Option<int> {
     let v = match w.next() {
         Some(v) => v,
         other => {
-            println!("invalid {}", other);
+            println!("invalid {:?}", other);
             return None;
         }
     };
@@ -104,7 +104,7 @@ fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
     let v = match w.next() {
         Some(v) => v,
         other => {
-            println!("invalid {}", other);
+            println!("invalid {:?}", other);
             return None;
         }
     };
@@ -115,7 +115,7 @@ fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
     match w.by_ref().last() {
         Some(v) => Some(v.to_string()),
         other => {
-            println!("invalid {}", other);
+            println!("invalid {:?}", other);
             None
         }
     }
@@ -138,7 +138,7 @@ impl Mtl {
         for line in file.lines() {
             let mut words = match line {
                 Ok(ref line) => line.as_slice().words(),
-                Err(err) => panic!("failed to readline {}", err)
+                Err(err) => panic!("failed to readline {:?}", err)
             };
             let first = words.next();
             match first {
@@ -254,7 +254,7 @@ impl Mtl {
                 }
                 Some("#") | None => {},
                 other => {
-                    panic!("unhandled mtl: {}", other);
+                    panic!("unhandled mtl: {:?}", other);
                 }
             }
         }
