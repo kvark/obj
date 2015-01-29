@@ -19,7 +19,7 @@ extern crate collections;
 extern crate core;
 extern crate genmesh;
 
-use std::io::{BufferedReader, File, IoResult};
+use std::old_io::{BufferedReader, File, IoResult};
 use std::collections::HashMap;
 use std::rc::Rc;
 
