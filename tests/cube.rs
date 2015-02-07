@@ -17,7 +17,7 @@ extern crate genmesh;
 extern crate obj;
 
 use obj::Obj;
-use std::io::BufReader;
+use std::old_io::BufReader;
 use genmesh::{MapToVertices, Polygon};
 
 static SQUARE: &'static str = "

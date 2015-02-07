@@ -152,7 +152,7 @@ impl Obj<String> {
             }
         };
         let vertex = match (FromStr::from_str(v0), FromStr::from_str(v1), FromStr::from_str(v2)) {
-            (Some(v0), Some(v1), Some(v2)) => [v0, v1, v2],
+            (Ok(v0), Ok(v1), Ok(v2)) => [v0, v1, v2],
             _ => {
                 panic!("could not parse line {:?} {:?} {:?}", v0, v1, v2);
             }
@@ -168,7 +168,7 @@ impl Obj<String> {
             }
         };
         let texture = match (FromStr::from_str(t0), FromStr::from_str(t1)) {
-            (Some(t0), Some(t1)) => [t0, t1],
+            (Ok(t0), Ok(t1)) => [t0, t1],
             _ => {
                 panic!("could not parse line {:?} {:?}", t0, t1);
             }
@@ -184,7 +184,7 @@ impl Obj<String> {
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
-            (Some(n0), Some(n1), Some(n2)) => [n0, n1, n2],
+            (Ok(n0), Ok(n1), Ok(n2)) => [n0, n1, n2],
             _ => {
                 panic!("could not parse line {:?} {:?} {:?}", n0, n1, n2);
             }
@@ -195,9 +195,9 @@ impl Obj<String> {
     fn parse_group(&mut self, group: &str)
             -> Result<(usize, Option<usize>, Option<usize>), String> {
         let mut group_split = group.split('/');
-        let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx));
-        let t: Option<isize> = group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx) } else { None } );
-        let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx));
+        let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
+        let t: Option<isize> = group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None } );
+        let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
 
         match (p, t, n) {
             (Some(p), v, n) => Ok((normalize(p, self.position.len()),

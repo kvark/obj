@@ -76,9 +76,9 @@ fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32; 3]> {
         }
     };
 
-    let x: Option<f32> = FromStr::from_str(x);
-    let y: Option<f32> = FromStr::from_str(y);
-    let z: Option<f32> = FromStr::from_str(z);
+    let x: Option<f32> = FromStr::from_str(x).ok();
+    let y: Option<f32> = FromStr::from_str(y).ok();
+    let z: Option<f32> = FromStr::from_str(z).ok();
 
     match (x, y, z) {
         (Some(x), Some(y), Some(z)) => Some([x, y, z]),
@@ -97,7 +97,7 @@ fn to_i32<'a>(w: &mut Words<'a>) -> Option<i32> {
             return None;
         }
     };
-    FromStr::from_str(v)
+    FromStr::from_str(v).ok()
 }
 
 fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
@@ -108,7 +108,7 @@ fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
             return None;
         }
     };
-    FromStr::from_str(v)
+    FromStr::from_str(v).ok()
 }
 
 fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
