@@ -19,7 +19,7 @@ pub use genmesh::{Triangle, Quad, Polygon};
 
 pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Object<MTL> {
     pub name: String,
     groups: Vec<Group<MTL>>
@@ -39,7 +39,7 @@ impl<MTL> Object<MTL> {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Group<MTL> {
     pub name: String,
     pub material: Option<MTL>,
@@ -315,7 +315,7 @@ impl Obj<String> {
                     
 
                     object = if line.len() > 2 {
-                        let name = line.slice_from(1).trim();
+                        let name = line[1..].trim();
                         Object::new(name.to_string())
                     } else {
                         Object::new("default".to_string())
@@ -332,7 +332,7 @@ impl Obj<String> {
                     };
 
                     if line.len() > 2 {
-                        let name = line.slice_from(1).trim();
+                        let name = line[1..].trim();
                         group = Some(Group::new(name.to_string()));
                     }
                 },
