@@ -11,7 +11,7 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
-#![feature(core, io)]
+#![feature(core, old_io)]
 
 extern crate genmesh;
 extern crate obj;
