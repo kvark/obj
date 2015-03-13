@@ -17,6 +17,8 @@
 extern crate genmesh;
 extern crate obj;
 
+use std::path::Path;
+
 #[test]
 fn load_test_file() {
     let _ = obj::load(&Path::new("test_assets/sponza.obj"));

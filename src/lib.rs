@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#![feature(core, collections, old_io, str_words, old_path)]
+#![feature(core, collections, str_words, io, path)]
 
 #![crate_name = "obj"]
 #![crate_type = "lib"]
@@ -21,7 +21,9 @@ extern crate collections;
 extern crate core;
 extern crate genmesh;
 
-use std::old_io::{BufferedReader, File, IoResult};
+use std::fs::File;
+use std::path::Path;
+use std::io::{self, BufReader};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -31,19 +33,19 @@ pub use mtl::{Mtl, Material};
 mod obj;
 mod mtl;
 
-pub fn load(path: &Path) -> IoResult<Obj<Rc<Material>>> {
+pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
     File::open(path).map(|f| {
-        let mut f = BufferedReader::new(f);
+        let mut f = BufReader::new(f);
         let obj = Obj::load(&mut f);
 
         let mut materials = HashMap::new();
 
         for m in obj.materials().iter() {
-            let mut p = path.clone();
+            let mut p = path.to_path_buf();
             p.pop();
             p.push(m.as_slice());
             let file = File::open(&p).ok().expect("failed to open material");
-            let mut f = BufferedReader::new(file);
+            let mut f = BufReader::new(file);
             let m = Mtl::load(&mut f);
             for m in m.materials.into_iter() {
                 materials.insert(m.name.clone(), Rc::new(m));

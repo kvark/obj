@@ -11,13 +11,13 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
-#![feature(core, old_io)]
+#![feature(core, io)]
 
 extern crate genmesh;
 extern crate obj;
 
+use std::io::BufReader;
 use obj::Obj;
-use std::old_io::BufReader;
 use genmesh::{MapToVertices, Polygon};
 
 static SQUARE: &'static str = "

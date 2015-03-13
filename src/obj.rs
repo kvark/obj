@@ -14,6 +14,7 @@
 
 use core::slice::Iter;
 use std::str::FromStr;
+use std::io::{BufRead, BufReadExt};
 
 pub use genmesh::{Triangle, Quad, Polygon};
 
@@ -256,7 +257,7 @@ impl Obj<String> {
         }
     }
 
-    pub fn load<B: Buffer>(input: &mut B) -> Obj<String> {
+    pub fn load<B: BufRead>(input: &mut B) -> Obj<String> {
         let mut dat = Obj::new();
         let mut object = Object::new("default".to_string());
         let mut group: Option<Group<String>> = None;

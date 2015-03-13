@@ -14,6 +14,7 @@
 
 use std::str::Words;
 use std::str::FromStr;
+use std::io::{BufRead, BufReadExt};
 
 pub struct Material {
     pub name: String,
@@ -132,7 +133,7 @@ impl Mtl {
         }
     }
 
-    pub fn load<B: Buffer>(file: &mut B) -> Mtl {
+    pub fn load<B: BufRead>(file: &mut B) -> Mtl {
         let mut mtl = Mtl::new();
         let mut material = None;
         for line in file.lines() {
