@@ -14,7 +14,7 @@
 
 use std::str::Words;
 use std::str::FromStr;
-use std::io::{BufRead, BufReadExt};
+use std::io::{BufRead};
 
 pub struct Material {
     pub name: String,

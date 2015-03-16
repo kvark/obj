@@ -14,7 +14,7 @@
 
 use core::slice::Iter;
 use std::str::FromStr;
-use std::io::{BufRead, BufReadExt};
+use std::io::{BufRead};
 
 pub use genmesh::{Triangle, Quad, Polygon};
 

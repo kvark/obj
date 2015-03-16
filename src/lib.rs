@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#![feature(core, collections, str_words, io, path)]
+#![feature(core, collections, str_words)]
 
 #![crate_name = "obj"]
 #![crate_type = "lib"]
