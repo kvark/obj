@@ -138,7 +138,7 @@ impl Mtl {
         let mut material = None;
         for line in file.lines() {
             let mut words = match line {
-                Ok(ref line) => line.as_slice().words(),
+                Ok(ref line) => line.words(),
                 Err(err) => panic!("failed to readline {:?}", err)
             };
             let first = words.next();

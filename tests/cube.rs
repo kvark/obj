@@ -11,7 +11,6 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
-#![feature(core, io)]
 
 extern crate genmesh;
 extern crate obj;
@@ -43,7 +42,7 @@ fn test_load_square() {
     let v = obj.position();
 
     for (a, b) in v.iter().zip(SQUARE_VBO.iter()) {
-        assert_eq!(a.as_slice(), b.as_slice());
+        assert_eq!(a, b);
     }
 
     for o in obj.object_iter() {
@@ -120,13 +119,13 @@ fn test_load_cube() {
     let v = obj.position();
 
     for (a, b) in v.iter().zip(CUBE_VBO.iter()) {
-        assert_eq!(a.as_slice(), b.as_slice());
+        assert_eq!(a, b);
     }
 
     for obj in obj.object_iter() {
-        assert_eq!(obj.name.as_slice(), "cube");
+        assert_eq!(obj.name, "cube");
         for (g, &name) in obj.group_iter().zip(CUBE_NAMES.iter()) {
-            assert_eq!(name, g.name.as_slice());
+            assert_eq!(name, g.name);
         }
     }
 }
@@ -204,6 +203,6 @@ fn test_load_cube_negative() {
     let v = obj.position();
 
     for (a, b) in v.iter().zip(CUBE_NEGATIVE_VBO.iter()) {
-        assert_eq!(a.as_slice(), b.as_slice());
+        assert_eq!(a, b);
     }
 }

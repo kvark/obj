@@ -57,7 +57,7 @@ impl<MTL> Group<MTL> {
     }
 
     pub fn indices<'a>(&'a self) -> &'a [Polygon<IndexTuple>] {
-        self.indices.as_slice()
+        &self.indices[..]
     }
 }
 
@@ -93,19 +93,19 @@ impl<MTL> Obj<MTL> {
     }
 
     pub fn position<'a>(&'a self) -> &'a [[f32; 3]] {
-        self.position.as_slice()
+        &self.position[..]
     }
 
     pub fn texture<'a>(&'a self) -> &'a [[f32; 2]] {
-        self.texture.as_slice()
+        &self.texture[..]
     }
 
     pub fn normal<'a>(&'a self) -> &'a [[f32; 3]] {
-        self.normal.as_slice()
+        &self.normal[..]
     }
 
     pub fn materials<'a>(&'a self) -> &'a [String] {
-        self.materials.as_slice()
+        &self.materials[..]
     }
 
     pub fn map<T, F>(self, mut f: F) -> Obj<T> where F: FnMut(Group<MTL>) -> Group<T> {
@@ -264,7 +264,7 @@ impl Obj<String> {
 
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
-                Ok(ref line) => (line.as_slice(), line.as_slice().words()),
+                Ok(ref line) => (line, line.words()),
                 Err(err) => panic!("failed to readline {}", err)
             };
             let first = words.next();

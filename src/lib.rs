@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#![feature(core, collections, str_words)]
+#![feature(core, collections, str_words, str_char)]
 
 #![crate_name = "obj"]
 #![crate_type = "lib"]
@@ -43,7 +43,7 @@ pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
         for m in obj.materials().iter() {
             let mut p = path.to_path_buf();
             p.pop();
-            p.push(m.as_slice());
+            p.push(m);
             let file = File::open(&p).ok().expect("failed to open material");
             let mut f = BufReader::new(file);
             let m = Mtl::load(&mut f);
