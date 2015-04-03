@@ -22,7 +22,8 @@ use std::path::Path;
 use std::io::{self, BufReader};
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::collections::vec_deque::VecDeque;
+use std::iter::Filter;
+use std::str::Split;
 
 pub use obj::{Obj, Object, Group, IndexTuple};
 pub use mtl::{Mtl, Material};
@@ -71,16 +72,14 @@ pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
 }
 
 
-struct Words<'a>(VecDeque<&'a str>);
+type Words<'a> = Filter<Split<'a, fn(char) -> bool>, fn(&&str) -> bool>;
 
 fn words<'a>(s: &'a str) -> Words<'a> {
-    Words(s.split(|c: char| c.is_whitespace())
-           .filter(|s| !s.is_empty())
-           .collect())
-}
+    fn is_not_empty(s: &&str) -> bool { !s.is_empty() }
+    let is_not_empty: fn(&&str) -> bool = is_not_empty; // coerce to fn pointer
 
-impl<'a> Iterator for Words<'a> {
-    type Item = &'a str;
+    fn is_whitespace(c: char) -> bool { c.is_whitespace() }
+    let is_whitespace: fn(char) -> bool = is_whitespace; // coerce to fn pointer!s.is_empty())
 
-    fn next(&mut self) -> Option<&'a str> { self.0.pop_front() }
+    s.split(is_whitespace).filter(is_not_empty)
 }
