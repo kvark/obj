@@ -12,8 +12,6 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#![feature(str_words)]
-
 #![crate_name = "obj"]
 #![crate_type = "lib"]
 
@@ -24,6 +22,7 @@ use std::path::Path;
 use std::io::{self, BufReader};
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::collections::vec_deque::VecDeque;
 
 pub use obj::{Obj, Object, Group, IndexTuple};
 pub use mtl::{Mtl, Material};
@@ -71,3 +70,17 @@ pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
     })
 }
 
+
+struct Words<'a>(VecDeque<&'a str>);
+
+fn words<'a>(s: &'a str) -> Words<'a> {
+    Words(s.split(|c: char| c.is_whitespace())
+           .filter(|s| !s.is_empty())
+           .collect())
+}
+
+impl<'a> Iterator for Words<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> { self.0.pop_front() }
+}

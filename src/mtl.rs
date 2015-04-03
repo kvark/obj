@@ -12,9 +12,11 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-use std::str::Words;
 use std::str::FromStr;
 use std::io::{BufRead};
+
+use {words, Words};
+
 
 pub struct Material {
     pub name: String,
@@ -138,7 +140,7 @@ impl Mtl {
         let mut material = None;
         for line in file.lines() {
             let mut words = match line {
-                Ok(ref line) => line.words(),
+                Ok(ref line) => words(line),
                 Err(err) => panic!("failed to readline {:?}", err)
             };
             let first = words.next();

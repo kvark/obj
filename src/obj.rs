@@ -17,6 +17,7 @@ use std::str::FromStr;
 use std::io::{BufRead};
 
 pub use genmesh::{Triangle, Quad, Polygon};
+use words;
 
 pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
@@ -264,7 +265,7 @@ impl Obj<String> {
 
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
-                Ok(ref line) => (line, line.words()),
+                Ok(ref line) => (line, words(line)),
                 Err(err) => panic!("failed to readline {}", err)
             };
             let first = words.next();
