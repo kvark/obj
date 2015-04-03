@@ -12,13 +12,11 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#![feature(core, collections, str_words, str_char)]
+#![feature(str_words)]
 
 #![crate_name = "obj"]
 #![crate_type = "lib"]
 
-extern crate collections;
-extern crate core;
 extern crate genmesh;
 
 use std::fs::File;

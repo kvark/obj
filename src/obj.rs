@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-use core::slice::Iter;
+use std::slice::Iter;
 use std::str::FromStr;
 use std::io::{BufRead};
 
@@ -356,7 +356,7 @@ impl Obj<String> {
                 }
                 Some("s") => (),
                 Some(other) => {
-                    if other.len() != 0 && other.char_at(0) != "#".char_at(0) {
+                    if !other.starts_with("#") {
                         panic!("Invalid token {:?} {:?}", other, words.next());
                     }
                 }

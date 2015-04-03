@@ -21,4 +21,4 @@ name = "obj"
 path = "src/lib.rs"
 
 [dependencies]
-genmesh = "0.1.*"
+genmesh = "0.2.*"
