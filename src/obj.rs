@@ -21,7 +21,7 @@ use words;
 
 pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Object<MTL> {
     pub name: String,
     groups: Vec<Group<MTL>>
@@ -41,9 +41,12 @@ impl<MTL> Object<MTL> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Group<MTL> {
     pub name: String,
+    /// An index is used to tell groups apart that share the
+    /// same name
+    pub index: usize,
     pub material: Option<MTL>,
     pub indices: Vec<Polygon<IndexTuple>>
 }
@@ -52,6 +55,7 @@ impl<MTL> Group<MTL> {
     pub fn new(name: String) -> Group<MTL> {
         Group {
             name: name,
+            index: 0,
             material: None,
             indices: Vec::new()
         }
@@ -347,6 +351,14 @@ impl Obj<String> {
                         Some(g) => g,
                         None => Group::new("default".to_string())
                     };
+
+                    // we found a new material that was applied to an existing
+                    // object. It is treated as a new group.
+                    if g.material.is_some() {
+                        object.groups.push(g.clone());
+                        g.index += 1;
+                        g.indices.clear();
+                    }
 
                     g.material = match words.next() {
                         Some(w) => Some(w.to_string()),

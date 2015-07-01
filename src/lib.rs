@@ -53,6 +53,7 @@ pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
         obj.map(|g| {
             let Group {
                 name,
+                index,
                 material,
                 indices
             } = g;
@@ -64,6 +65,7 @@ pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
 
             Group {
                 name: name,
+                index: index,
                 material: material,
                 indices: indices
             }
