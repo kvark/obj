@@ -1,7 +1,7 @@
 [package]
 
 name = "obj"
-version = "0.2.2"
+version = "0.3.0"
 authors = [
     "Colin Sherratt <colin.sherratt@gmail.com>",
 ]
@@ -21,4 +21,4 @@ name = "obj"
 path = "src/lib.rs"
 
 [dependencies]
-genmesh = "0.2.*"
+genmesh = "0.3.*"
