@@ -16,43 +16,71 @@ use std::slice::Iter;
 use std::str::FromStr;
 use std::io::{BufRead};
 
+#[cfg(feature = "usegenmesh")]
 pub use genmesh::{Triangle, Quad, Polygon};
 use words;
 
 pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
+pub type SimplePolygon = Vec<IndexTuple>;
+
+pub trait GenPolygon: Clone {
+    fn new(data: Vec<IndexTuple>) -> Self;
+}
+
+impl GenPolygon for SimplePolygon {
+    fn new(data: Vec<IndexTuple>) -> Self { data }
+}
+
+#[cfg(feature = "usegenmesh")]
+impl GenPolygon for Polygon<IndexTuple> {
+  fn new(gs: Vec<IndexTuple>) -> Self {
+      match gs.len() {
+          3 => Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2])),
+          4 => Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3])),
+          _ => panic!("Unsupported"),
+      }
+// Slice pattern syntax is experimental
+//    match &gs[..] {
+//      &[g0, g1, g2] => Polygon::PolyTri(Triangle::new(g0, g1, g2)),
+//      &[g0, g1, g2, g3] => Polygon::PolyQuad(Quad::new(g0, g1, g2, g3)),
+//      _ => panic!("Unsupported"),
+//    }
+  }
+}
+
 #[derive(Debug, Clone)]
-pub struct Object<MTL> {
+pub struct Object<MTL,P: GenPolygon> {
     pub name: String,
-    groups: Vec<Group<MTL>>
+    groups: Vec<Group<MTL,P>>
 
 }
 
-impl<MTL> Object<MTL> {
-    pub fn new(name: String) -> Object<MTL> {
+impl<MTL,P: GenPolygon> Object<MTL,P> {
+    pub fn new(name: String) -> Object<MTL,P> {
         Object {
             name: name,
             groups: Vec::new()
         }
     }
 
-    pub fn group_iter(&self) -> Iter<Group<MTL>> {
+    pub fn group_iter(&self) -> Iter<Group<MTL,P>> {
         self.groups.iter()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Group<MTL> {
+pub struct Group<MTL,P: GenPolygon> {
     pub name: String,
     /// An index is used to tell groups apart that share the
     /// same name
     pub index: usize,
     pub material: Option<MTL>,
-    pub indices: Vec<Polygon<IndexTuple>>
+    pub indices: Vec<P>
 }
 
-impl<MTL> Group<MTL> {
-    pub fn new(name: String) -> Group<MTL> {
+impl<MTL,P: GenPolygon> Group<MTL,P> {
+    pub fn new(name: String) -> Group<MTL,P> {
         Group {
             name: name,
             index: 0,
@@ -61,16 +89,16 @@ impl<MTL> Group<MTL> {
         }
     }
 
-    pub fn indices<'a>(&'a self) -> &'a [Polygon<IndexTuple>] {
+    pub fn indices(&self) -> &[P] {
         &self.indices[..]
     }
 }
 
-pub struct Obj<MTL> {
+pub struct Obj<MTL,P: GenPolygon> {
     position: Vec<[f32; 3]>,
     texture: Vec<[f32; 2]>,
     normal: Vec<[f32; 3]>,
-    objects: Vec<Object<MTL>>,
+    objects: Vec<Object<MTL,P>>,
     materials: Vec<String>
 }
 
@@ -82,8 +110,8 @@ fn normalize(idx: isize, len: usize) -> usize {
     }
 }
 
-impl<MTL> Obj<MTL> {
-    fn new() -> Obj<MTL> {
+impl<MTL,P: GenPolygon> Obj<MTL,P> {
+    fn new() -> Obj<MTL,P> {
         Obj {
             position: Vec::new(),
             texture: Vec::new(),
@@ -93,27 +121,27 @@ impl<MTL> Obj<MTL> {
         }
     }
 
-    pub fn object_iter<'a>(&'a self) -> Iter<Object<MTL>> {
+    pub fn object_iter(&self) -> Iter<Object<MTL,P>> {
         self.objects.iter()
     }
 
-    pub fn position<'a>(&'a self) -> &'a [[f32; 3]] {
+    pub fn position(&self) -> &[[f32; 3]] {
         &self.position[..]
     }
 
-    pub fn texture<'a>(&'a self) -> &'a [[f32; 2]] {
+    pub fn texture(&self) -> &[[f32; 2]] {
         &self.texture[..]
     }
 
-    pub fn normal<'a>(&'a self) -> &'a [[f32; 3]] {
+    pub fn normal(&self) -> &[[f32; 3]] {
         &self.normal[..]
     }
 
-    pub fn materials<'a>(&'a self) -> &'a [String] {
+    pub fn materials(&self) -> &[String] {
         &self.materials[..]
     }
 
-    pub fn map<T, F>(self, mut f: F) -> Obj<T> where F: FnMut(Group<MTL>) -> Group<T> {
+    pub fn map<T, F>(self, mut f: F) -> Obj<T,P> where F: FnMut(Group<MTL,P>) -> Group<T,P> {
         let Obj {
             position,
             texture,
@@ -149,7 +177,7 @@ impl<MTL> Obj<MTL> {
     }
 }
 
-impl Obj<String> {
+impl<P: GenPolygon> Obj<String, P> {
     fn parse_vertex(&mut self, v0: Option<&str>, v1: Option<&str>, v2: Option<&str>) {
         let (v0, v1, v2) = match (v0, v1, v2) {
             (Some(v0), Some(v1), Some(v2)) => (v0, v1, v2),
@@ -198,8 +226,8 @@ impl Obj<String> {
         self.normal.push(normal);
     }
 
-    fn parse_group(&mut self, group: &str)
-            -> Result<(usize, Option<usize>, Option<usize>), String> {
+    fn parse_group(&self, group: &str)
+            -> Result<IndexTuple, String> {
         let mut group_split = group.split('/');
         let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
         let t: Option<isize> = group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None } );
@@ -214,58 +242,21 @@ impl Obj<String> {
         }
     }
 
-    fn parse_triangle(&mut self, g0: &str, g1: &str, g2: &str)
-            -> Result<Triangle<IndexTuple>, String> {
-        let g0 = self.parse_group(g0);
-        let g1 = self.parse_group(g1);
-        let g2 = self.parse_group(g2);
 
-        match (g0, g1, g2) {
-            (Err(e), _, _) => { Err(e) }
-            (_, Err(e), _) => { Err(e) }
-            (_, _, Err(e)) => { Err(e) }
-            (Ok(g0), Ok(g1), Ok(g2)) => {
-                Ok(Triangle::new(g0, g1, g2))
-            }
+    fn parse_face(&self, groups: &mut ::Words)
+          -> Result<P, String>  {
+        let mut ret = Vec::with_capacity(3);
+        for g in groups {
+          let ituple = try!(self.parse_group(g));
+          ret.push(ituple);
         }
+        Ok(P::new(ret))
     }
 
-    fn parse_quad(&mut self, g0: &str, g1: &str, g2: &str, g3: &str)
-            -> Result<Quad<IndexTuple>, String> {
-
-        let g0 = self.parse_group(g0);
-        let g1 = self.parse_group(g1);
-        let g2 = self.parse_group(g2);
-        let g3 = self.parse_group(g3);
-
-        match (g0, g1, g2, g3) {
-            (Err(e), _, _, _) => { Err(e) }
-            (_, Err(e), _, _) => { Err(e) }
-            (_, _, Err(e), _) => { Err(e) }
-            (_, _, _, Err(e)) => { Err(e) }
-            (Ok(g0), Ok(g1), Ok(g2), Ok(g3)) => {
-                Ok(Quad::new(g0, g1, g2, g3))
-            }
-        }
-    }
-
-    fn parse_face(&mut self, g0: Option<&str>, g1: Option<&str>, g2: Option<&str>, g3: Option<&str>)
-        -> Result<Polygon<IndexTuple>, String>  {
-        match (g0, g1, g2, g3) {
-            (Some(g0), Some(g1), Some(g2), None) => {
-                self.parse_triangle(g0, g1, g2).map(|p| Polygon::PolyTri(p))
-            }
-            (Some(g0), Some(g1), Some(g2), Some(g3)) => {
-                self.parse_quad(g0, g1, g2, g3).map(|p| Polygon::PolyQuad(p))
-            }
-            _ => {panic!("Unsupported");}
-        }
-    }
-
-    pub fn load<B: BufRead>(input: &mut B) -> Obj<String> {
+    pub fn load<B: BufRead>(input: &mut B) -> Obj<String, P> {
         let mut dat = Obj::new();
         let mut object = Object::new("default".to_string());
-        let mut group: Option<Group<String>> = None;
+        let mut group: Option<Group<String, P>> = None;
 
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
@@ -288,9 +279,8 @@ impl Obj<String> {
                     dat.parse_normal(n0, n1, n2);
                 },
                 Some("f") => {
-                    let (g0, g1, g2, g3) = (words.next(), words.next(), words.next(), words.next());
 
-                    let poly= match dat.parse_face(g0, g1, g2, g3) {
+                    let poly= match dat.parse_face(&mut words) {
                         Err(e) => panic!("Could not parse line: {}\nline: {}: {}",
                             e, idx, line
                         ),

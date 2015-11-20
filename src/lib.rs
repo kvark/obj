@@ -15,6 +15,7 @@
 #![crate_name = "obj"]
 #![crate_type = "lib"]
 
+#[cfg(feature = "usegenmesh")]
 extern crate genmesh;
 
 use std::fs::File;
@@ -25,13 +26,13 @@ use std::rc::Rc;
 use std::iter::Filter;
 use std::str::Split;
 
-pub use obj::{Obj, Object, Group, IndexTuple};
+pub use obj::{Obj, Object, Group, IndexTuple, GenPolygon, SimplePolygon};
 pub use mtl::{Mtl, Material};
 
 mod obj;
 mod mtl;
 
-pub fn load(path: &Path) -> io::Result<Obj<Rc<Material>>> {
+pub fn load<P: GenPolygon>(path: &Path) -> io::Result<Obj<Rc<Material>,P>> {
     File::open(path).map(|f| {
         let mut f = BufReader::new(f);
         let obj = Obj::load(&mut f);
