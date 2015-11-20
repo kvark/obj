@@ -1,7 +1,7 @@
 [package]
 
 name = "obj"
-version = "0.3.0"
+version = "0.4.0"
 authors = [
     "Colin Sherratt <colin.sherratt@gmail.com>",
 ]
@@ -20,5 +20,9 @@ exclude = [
 name = "obj"
 path = "src/lib.rs"
 
+[features]
+default = []
+usegenmesh = ["genmesh"]
+
 [dependencies]
-genmesh = "0.3.*"
+genmesh = { version = "0.3.*", optional = true }
