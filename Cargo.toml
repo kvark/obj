@@ -25,4 +25,4 @@ default = []
 usegenmesh = ["genmesh"]
 
 [dependencies]
-genmesh = { version = "0.3.*", optional = true }
+genmesh = { version = "0.4", optional = true }
