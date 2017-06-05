@@ -12,8 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+use std::io::BufRead;
 use std::str::FromStr;
-use std::io::{BufRead};
 
 
 pub struct Material {
@@ -31,12 +31,12 @@ pub struct Material {
     pub d: Option<f32>,
     pub illum: Option<i32>,
 
-    pub map_ka:   Option<String>,
-    pub map_kd:   Option<String>,
-    pub map_ks:   Option<String>,
-    pub map_ke:   Option<String>,
-    pub map_ns:   Option<String>,
-    pub map_d:    Option<String>,
+    pub map_ka: Option<String>,
+    pub map_kd: Option<String>,
+    pub map_ks: Option<String>,
+    pub map_ke: Option<String>,
+    pub map_ns: Option<String>,
+    pub map_d: Option<String>,
     pub map_bump: Option<String>,
     pub map_refl: Option<String>,
 }
@@ -63,7 +63,7 @@ impl Material {
             map_d: None,
             map_bump: None,
             map_refl: None,
-            illum: None
+            illum: None,
         }
     }
 }
@@ -122,14 +122,12 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
 
 
 pub struct Mtl {
-    pub materials: Vec<Material>
+    pub materials: Vec<Material>,
 }
 
 impl Mtl {
     fn new() -> Self {
-        Mtl {
-            materials: Vec::new()
-        }
+        Mtl { materials: Vec::new() }
     }
 
     pub fn load<B: BufRead>(file: &mut B) -> Self {
@@ -138,14 +136,12 @@ impl Mtl {
         for line in file.lines() {
             let mut parser = match line {
                 Ok(ref line) => Parser(line.split_whitespace().filter(|s| !s.is_empty())),
-                Err(err) => panic!("failed to readline {:?}", err)
+                Err(err) => panic!("failed to readline {:?}", err),
             };
             match parser.0.next() {
                 Some("newmtl") => {
                     mtl.materials.extend(material.take());
-                    material = Some(Material::new(
-                        parser.0.next().expect("Failed to read name").to_string()
-                    ))
+                    material = Some(Material::new(parser.0.next().expect("Failed to read name").to_string()))
                 }
                 Some("Ka") => {
                     if let Some(ref mut m) = material {
@@ -232,7 +228,7 @@ impl Mtl {
                         m.map_bump = parser.get_string();
                     }
                 }
-                Some("#") | None => {},
+                Some("#") | None => {}
                 other => {
                     panic!("unhandled mtl: {:?}", other);
                 }

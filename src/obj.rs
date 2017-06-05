@@ -12,12 +12,12 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-use std::slice::Iter;
-use std::str::FromStr;
-use std::io::{BufRead};
 
 #[cfg(feature = "genmesh")]
-pub use genmesh::{Triangle, Quad, Polygon};
+pub use genmesh::{Polygon, Quad, Triangle};
+
+use std::io::BufRead;
+use std::str::FromStr;
 
 pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
@@ -28,77 +28,67 @@ pub trait GenPolygon: Clone {
 }
 
 impl GenPolygon for SimplePolygon {
-    fn new(data: Vec<IndexTuple>) -> Self { data }
+    fn new(data: Vec<IndexTuple>) -> Self {
+        data
+    }
 }
 
 #[cfg(feature = "genmesh")]
 impl GenPolygon for Polygon<IndexTuple> {
-  fn new(gs: Vec<IndexTuple>) -> Self {
-      match gs.len() {
-          3 => Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2])),
-          4 => Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3])),
-          _ => panic!("Unsupported"),
-      }
-// Slice pattern syntax is experimental
-//    match &gs[..] {
-//      &[g0, g1, g2] => Polygon::PolyTri(Triangle::new(g0, g1, g2)),
-//      &[g0, g1, g2, g3] => Polygon::PolyQuad(Quad::new(g0, g1, g2, g3)),
-//      _ => panic!("Unsupported"),
-//    }
-  }
-}
-
-#[derive(Debug, Clone)]
-pub struct Object<MTL,P: GenPolygon> {
-    pub name: String,
-    groups: Vec<Group<MTL,P>>
-
-}
-
-impl<MTL,P: GenPolygon> Object<MTL,P> {
-    pub fn new(name: String) -> Self {
-        Object {
-            name: name,
-            groups: Vec::new()
+    fn new(gs: Vec<IndexTuple>) -> Self {
+        match gs.len() {
+            3 => Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2])),
+            4 => Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3])),
+            _ => panic!("Unsupported"),
         }
-    }
-
-    pub fn group_iter(&self) -> Iter<Group<MTL,P>> {
-        self.groups.iter()
+        // Slice pattern syntax is experimental
+        //    match &gs[..] {
+        //      &[g0, g1, g2] => Polygon::PolyTri(Triangle::new(g0, g1, g2)),
+        //      &[g0, g1, g2, g3] => Polygon::PolyQuad(Quad::new(g0, g1, g2, g3)),
+        //      _ => panic!("Unsupported"),
+        //    }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Group<MTL,P: GenPolygon> {
+pub struct Object<MTL, P: GenPolygon> {
+    pub name: String,
+    pub groups: Vec<Group<MTL, P>>,
+}
+
+impl<MTL, P: GenPolygon> Object<MTL, P> {
+    pub fn new(name: String) -> Self {
+        Object { name: name, groups: Vec::new() }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Group<MTL, P: GenPolygon> {
     pub name: String,
     /// An index is used to tell groups apart that share the
     /// same name
     pub index: usize,
     pub material: Option<MTL>,
-    pub indices: Vec<P>
+    pub indices: Vec<P>,
 }
 
-impl<MTL,P: GenPolygon> Group<MTL,P> {
-    pub fn new(name: String) -> Group<MTL,P> {
+impl<MTL, P: GenPolygon> Group<MTL, P> {
+    pub fn new(name: String) -> Self {
         Group {
             name: name,
             index: 0,
             material: None,
-            indices: Vec::new()
+            indices: Vec::new(),
         }
-    }
-
-    pub fn indices(&self) -> &[P] {
-        &self.indices[..]
     }
 }
 
-pub struct Obj<MTL,P: GenPolygon> {
-    position: Vec<[f32; 3]>,
-    texture: Vec<[f32; 2]>,
-    normal: Vec<[f32; 3]>,
-    objects: Vec<Object<MTL,P>>,
-    materials: Vec<String>
+pub struct Obj<MTL, P: GenPolygon> {
+    pub position: Vec<[f32; 3]>,
+    pub texture: Vec<[f32; 2]>,
+    pub normal: Vec<[f32; 3]>,
+    pub objects: Vec<Object<MTL, P>>,
+    pub materials: Vec<String>,
 }
 
 fn normalize(idx: isize, len: usize) -> usize {
@@ -109,48 +99,26 @@ fn normalize(idx: isize, len: usize) -> usize {
     }
 }
 
-impl<MTL,P: GenPolygon> Obj<MTL,P> {
+impl<MTL, P: GenPolygon> Obj<MTL, P> {
     fn new() -> Self {
         Obj {
             position: Vec::new(),
             texture: Vec::new(),
             normal: Vec::new(),
             objects: Vec::new(),
-            materials: Vec::new()
+            materials: Vec::new(),
         }
     }
 
-    pub fn object_iter(&self) -> Iter<Object<MTL,P>> {
-        self.objects.iter()
-    }
-
-    pub fn position(&self) -> &[[f32; 3]] {
-        &self.position[..]
-    }
-
-    pub fn texture(&self) -> &[[f32; 2]] {
-        &self.texture[..]
-    }
-
-    pub fn normal(&self) -> &[[f32; 3]] {
-        &self.normal[..]
-    }
-
-    pub fn materials(&self) -> &[String] {
-        &self.materials[..]
-    }
-
-    pub fn map<T, F>(self, mut f: F) -> Obj<T,P>
-    where F: FnMut(Group<MTL,P>) -> Group<T,P>
+    pub fn map<T, F>(self, mut f: F) -> Obj<T, P>
+    where
+        F: FnMut(Group<MTL, P>) -> Group<T, P>,
     {
-        let objects = self.objects.into_iter()
-            .map(|Object{ name, groups }| {
+        let objects = self.objects
+            .into_iter()
+            .map(|Object { name, groups }| {
                 let groups = groups.into_iter().map(|g| f(g)).collect();
-                Object {
-                    name: name,
-                    groups: groups
-                }
-
+                Object { name: name, groups: groups }
             })
             .collect();
         Obj {
@@ -212,30 +180,32 @@ impl<P: GenPolygon> Obj<String, P> {
         self.normal.push(normal);
     }
 
-    fn parse_group(&self, group: &str)
-            -> Result<IndexTuple, String> {
+    fn parse_group(&self, group: &str) -> Result<IndexTuple, String> {
         let mut group_split = group.split('/');
         let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
-        let t: Option<isize> = group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None } );
+        let t: Option<isize> =
+            group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None });
         let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
 
         match (p, t, n) {
-            (Some(p), v, n) => Ok((normalize(p, self.position.len()),
-                                   v.map(|v| normalize(v, self.texture.len())),
-                                   n.map(|n| normalize(n, self.normal.len()))
-                                 )),
-            _ => Err(format!("poorly formed group {}", group))
+            (Some(p), v, n) => {
+                Ok((normalize(p, self.position.len()),
+                    v.map(|v| normalize(v, self.texture.len())),
+                    n.map(|n| normalize(n, self.normal.len()))))
+            }
+            _ => Err(format!("poorly formed group {}", group)),
         }
     }
 
 
     fn parse_face<'a, I>(&self, groups: &mut I) -> Result<P, String>
-    where I: Iterator<Item = &'a str>
+    where
+        I: Iterator<Item = &'a str>,
     {
         let mut ret = Vec::with_capacity(3);
         for g in groups {
-          let ituple = try!(self.parse_group(g));
-          ret.push(ituple);
+            let ituple = self.parse_group(g)?;
+            ret.push(ituple);
         }
         Ok(P::new(ret))
     }
@@ -248,7 +218,7 @@ impl<P: GenPolygon> Obj<String, P> {
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
                 Ok(ref line) => (line, line.split_whitespace().filter(|s| !s.is_empty())),
-                Err(err) => panic!("failed to readline {}", err)
+                Err(err) => panic!("failed to readline {}", err),
             };
             let first = words.next();
 
@@ -256,44 +226,42 @@ impl<P: GenPolygon> Obj<String, P> {
                 Some("v") => {
                     let (v0, v1, v2) = (words.next(), words.next(), words.next());
                     dat.parse_vertex(v0, v1, v2);
-                },
+                }
                 Some("vt") => {
                     let (t0, t1) = (words.next(), words.next());
                     dat.parse_texture(t0, t1);
-                },
+                }
                 Some("vn") => {
                     let (n0, n1, n2) = (words.next(), words.next(), words.next());
                     dat.parse_normal(n0, n1, n2);
-                },
+                }
                 Some("f") => {
 
-                    let poly= match dat.parse_face(&mut words) {
-                        Err(e) => panic!("Could not parse line: {}\nline: {}: {}",
-                            e, idx, line
-                        ),
-                        Ok(poly) => poly
+                    let poly = match dat.parse_face(&mut words) {
+                        Err(e) => panic!("Could not parse line: {}\nline: {}: {}", e, idx, line),
+                        Ok(poly) => poly,
                     };
 
                     group = Some(match group {
-                        None => {
-                            let mut obj = Group::new("default".to_string());
-                            obj.indices.push(poly);
-                            obj
-                        }
-                        Some(mut obj) => {
-                            obj.indices.push(poly);
-                            obj
-                        }
-                    });
-                },
+                                     None => {
+                                         let mut obj = Group::new("default".to_string());
+                                         obj.indices.push(poly);
+                                         obj
+                                     }
+                                     Some(mut obj) => {
+                                         obj.indices.push(poly);
+                                         obj
+                                     }
+                                 });
+                }
                 Some("o") => {
                     group = match group {
                         Some(val) => {
                             object.groups.push(val);
                             dat.objects.push(object);
                             None
-                        },
-                        None => None
+                        }
+                        None => None,
                     };
 
                     object = if line.len() > 2 {
@@ -302,21 +270,21 @@ impl<P: GenPolygon> Obj<String, P> {
                     } else {
                         Object::new("default".to_string())
                     };
-                },
+                }
                 Some("g") => {
                     group = match group {
                         Some(val) => {
                             object.groups.push(val);
                             None
-                        },
-                        None => None
+                        }
+                        None => None,
                     };
 
                     if line.len() > 2 {
                         let name = line[1..].trim();
                         group = Some(Group::new(name.to_string()));
                     }
-                },
+                }
                 Some("mtllib") => {
                     let name = words.next().expect("Failed to find name for mtllib");
                     dat.materials.push(name.to_string());
@@ -324,7 +292,7 @@ impl<P: GenPolygon> Obj<String, P> {
                 Some("usemtl") => {
                     let mut g = match group {
                         Some(g) => g,
-                        None => Group::new("default".to_string())
+                        None => Group::new("default".to_string()),
                     };
 
                     // we found a new material that was applied to an existing
@@ -337,7 +305,7 @@ impl<P: GenPolygon> Obj<String, P> {
 
                     g.material = match words.next() {
                         Some(w) => Some(w.to_string()),
-                        None => None
+                        None => None,
                     };
 
                     group = Some(g);
@@ -355,7 +323,7 @@ impl<P: GenPolygon> Obj<String, P> {
 
         match group {
             Some(g) => object.groups.push(g),
-            None => ()
+            None => (),
         }
         dat.objects.push(object);
         dat

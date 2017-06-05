@@ -16,12 +16,12 @@
 extern crate genmesh;
 extern crate obj;
 
-use std::io::BufReader;
+#[cfg(feature = "genmesh")]
+use genmesh::{MapToVertices, Polygon};
 use obj::{Obj, SimplePolygon};
 #[cfg(feature = "genmesh")]
 use obj::IndexTuple;
-#[cfg(feature = "genmesh")]
-use genmesh::{MapToVertices, Polygon};
+use std::io::BufReader;
 
 static SQUARE: &'static str = "
 v 0 1 0
@@ -31,12 +31,7 @@ v 1 1 0
 f 1 2 3 4
 ";
 
-static SQUARE_VBO: &'static [[f32; 3]] = &[
-    [0., 1., 0.],
-    [0., 0., 0.],
-    [1., 0., 0.],
-    [1., 1., 0.],
-];
+static SQUARE_VBO: &'static [[f32; 3]] = &[[0., 1., 0.], [0., 0., 0.], [1., 0., 0.], [1., 1., 0.]];
 
 #[test]
 #[cfg(feature = "genmesh")]
@@ -44,23 +39,20 @@ fn test_load_square() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
     let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
 
-    let v = obj.position();
+    let v = &obj.position;
 
     for (a, b) in v.iter().zip(SQUARE_VBO.iter()) {
         assert_eq!(a, b);
     }
 
-    for o in obj.object_iter() {
-        for g in o.group_iter() {
-            let p: Vec<Polygon<([f32;  3],[f32;  2],[f32;  3])>> =
-                g.indices().iter().map(|x| *x)
-                .vertex(|(p, t, n)|
-                    (
-                        obj.position()[p],
-                        t.map_or([0., 0.], |t| obj.texture()[t]),
-                        n.map_or([1., 0., 0.,], |n| obj.normal()[n])
-                    )
-                )
+    for o in &obj.objects {
+        for g in &o.groups {
+            let p: Vec<Polygon<([f32; 3], [f32; 2], [f32; 3])>> = g.indices
+                .iter()
+                .map(|x| *x)
+                .vertex(|(p, t, n)| {
+                    (obj.position[p], t.map_or([0., 0.], |t| obj.texture[t]), n.map_or([1., 0., 0.], |n| obj.normal[n]))
+                })
                 .collect();
             drop(p)
         }
@@ -73,7 +65,7 @@ fn test_load_square_nodeps() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
     let obj = Obj::<String, SimplePolygon>::load(&mut reader);
 
-    let v = obj.position();
+    let v = &obj.position;
 
     for (a, b) in v.iter().zip(SQUARE_VBO.iter()) {
         assert_eq!(a, b);
@@ -134,15 +126,15 @@ fn test_load_cube() {
     let mut reader = BufReader::new(CUBE.as_bytes());
     let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
 
-    let v = obj.position();
+    let v = &obj.position;
 
     for (a, b) in v.iter().zip(CUBE_VBO.iter()) {
         assert_eq!(a, b);
     }
 
-    for obj in obj.object_iter() {
+    for obj in &obj.objects {
         assert_eq!(obj.name, "cube");
-        for (g, &name) in obj.group_iter().zip(CUBE_NAMES.iter()) {
+        for (g, &name) in obj.groups.iter().zip(CUBE_NAMES.iter()) {
             assert_eq!(name, g.name);
         }
     }
@@ -153,15 +145,15 @@ fn test_load_cube_nodeps() {
     let mut reader = BufReader::new(CUBE.as_bytes());
     let obj = Obj::<String, SimplePolygon>::load(&mut reader);
 
-    let v = obj.position();
+    let v = &obj.position;
 
     for (a, b) in v.iter().zip(CUBE_VBO.iter()) {
         assert_eq!(a, b);
     }
 
-    for obj in obj.object_iter() {
+    for obj in &obj.objects {
         assert_eq!(obj.name, "cube");
-        for (g, &name) in obj.group_iter().zip(CUBE_NAMES.iter()) {
+        for (g, &name) in obj.groups.iter().zip(CUBE_NAMES.iter()) {
             assert_eq!(name, g.name);
         }
     }
@@ -238,7 +230,7 @@ fn test_load_cube_negative() {
     let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
     let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
 
-    let v = obj.position();
+    let v = &obj.position;
 
     for (a, b) in v.iter().zip(CUBE_NEGATIVE_VBO.iter()) {
         assert_eq!(a, b);
@@ -250,7 +242,7 @@ fn test_load_cube_negative_nodeps() {
     let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
     let obj = Obj::<String, SimplePolygon>::load(&mut reader);
 
-    let v = obj.position();
+    let v = &obj.position;
 
     for (a, b) in v.iter().zip(CUBE_NEGATIVE_VBO.iter()) {
         assert_eq!(a, b);

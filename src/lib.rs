@@ -15,24 +15,24 @@
 #[cfg(feature = "genmesh")]
 extern crate genmesh;
 
-use std::fs::File;
-use std::path::Path;
-use std::io::{BufReader, Result as IoResult};
-use std::collections::HashMap;
-use std::rc::Rc;
+pub use mtl::{Material, Mtl};
+pub use obj::{GenPolygon, Group, IndexTuple, Obj, Object, SimplePolygon};
 
-pub use obj::{Obj, Object, Group, IndexTuple, GenPolygon, SimplePolygon};
-pub use mtl::{Mtl, Material};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, Result as IoResult};
+use std::path::Path;
+use std::rc::Rc;
 
 mod obj;
 mod mtl;
 
-pub fn load<P: GenPolygon>(path: &Path) -> IoResult<Obj<Rc<Material>,P>> {
+pub fn load<P: GenPolygon>(path: &Path) -> IoResult<Obj<Rc<Material>, P>> {
     let f = File::open(path)?;
     let obj = Obj::load(&mut BufReader::new(f));
     let mut materials = HashMap::new();
 
-    for m in obj.materials().iter() {
+    for m in &obj.materials {
         let p = path.with_file_name(m);
         let file = File::open(&p)?;
         let mtl = Mtl::load(&mut BufReader::new(file));
@@ -41,7 +41,7 @@ pub fn load<P: GenPolygon>(path: &Path) -> IoResult<Obj<Rc<Material>,P>> {
         }
     }
 
-    Ok(obj.map(|Group {name, index, material, indices}| {
+    Ok(obj.map(|Group { name, index, material, indices }| {
         Group {
             name,
             index,
