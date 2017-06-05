@@ -1,4 +1,4 @@
-//   Copyright 2014 Colin Sherratt
+//   Copyright 2017 GFX Developers
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 extern crate obj;
 
 use std::path::Path;
-use obj::{SimplePolygon};
+use obj::SimplePolygon;
 
 #[test]
 fn load_test_file() {
