@@ -1,4 +1,4 @@
-//   Copyright 2014 Colin Sherratt
+//   Copyright 2017 GFX Developers
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
 
 use std::str::FromStr;
 use std::io::{BufRead};
-
-use {words, Words};
 
 
 pub struct Material {
@@ -44,7 +42,7 @@ pub struct Material {
 }
 
 impl Material {
-    fn new(name: String) -> Material {
+    fn new(name: String) -> Self {
         Material {
             name: name,
             ka: None,
@@ -70,190 +68,169 @@ impl Material {
     }
 }
 
-fn to_vec<'a>(w: &mut Words<'a>) -> Option<[f32; 3]> {
-    let (x, y, z) = match (w.next(), w.next(), w.next()) {
-        (Some(x), Some(y), Some(z)) => (x, y, z),
-        other => {
-            println!("invalid {:?}", other);
-            return None;
+struct Parser<I>(I);
+
+impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
+    fn get_vec(&mut self) -> Option<[f32; 3]> {
+        let (x, y, z) = match (self.0.next(), self.0.next(), self.0.next()) {
+            (Some(x), Some(y), Some(z)) => (x, y, z),
+            other => {
+                println!("invalid {:?}", other);
+                return None;
+            }
+        };
+
+        match (x.parse::<f32>(), y.parse::<f32>(), z.parse::<f32>()) {
+            (Ok(x), Ok(y), Ok(z)) => Some([x, y, z]),
+            other => {
+                println!("invalid {:?}", other);
+                None
+            }
         }
-    };
+    }
 
-    let x: Option<f32> = FromStr::from_str(x).ok();
-    let y: Option<f32> = FromStr::from_str(y).ok();
-    let z: Option<f32> = FromStr::from_str(z).ok();
+    fn get_i32(&mut self) -> Option<i32> {
+        match self.0.next() {
+            Some(v) => FromStr::from_str(v).ok(),
+            None => {
+                println!("missing i32");
+                None
+            }
+        }
+    }
 
-    match (x, y, z) {
-        (Some(x), Some(y), Some(z)) => Some([x, y, z]),
-        other => {
-            println!("invalid {:?}", other);
-            None
+    fn get_f32(&mut self) -> Option<f32> {
+        match self.0.next() {
+            Some(v) => FromStr::from_str(v).ok(),
+            None => {
+                println!("missing f32");
+                None
+            }
+        }
+    }
+
+    fn get_string(&mut self) -> Option<String> {
+        match self.0.next() {
+            Some(v) => Some(v.to_string()),
+            None => {
+                println!("missing String");
+                None
+            }
         }
     }
 }
 
-fn to_i32<'a>(w: &mut Words<'a>) -> Option<i32> {
-    let v = match w.next() {
-        Some(v) => v,
-        other => {
-            println!("invalid {:?}", other);
-            return None;
-        }
-    };
-    FromStr::from_str(v).ok()
-}
-
-fn to_f32<'a>(w: &mut Words<'a>) -> Option<f32> {
-    let v = match w.next() {
-        Some(v) => v,
-        other => {
-            println!("invalid {:?}", other);
-            return None;
-        }
-    };
-    FromStr::from_str(v).ok()
-}
-
-fn to_string<'a>(w: &mut Words<'a>) -> Option<String> {
-    match w.by_ref().last() {
-        Some(v) => Some(v.to_string()),
-        other => {
-            println!("invalid {:?}", other);
-            None
-        }
-    }
-}
 
 pub struct Mtl {
     pub materials: Vec<Material>
 }
 
 impl Mtl {
-    fn new() -> Mtl {
+    fn new() -> Self {
         Mtl {
             materials: Vec::new()
         }
     }
 
-    pub fn load<B: BufRead>(file: &mut B) -> Mtl {
+    pub fn load<B: BufRead>(file: &mut B) -> Self {
         let mut mtl = Mtl::new();
         let mut material = None;
         for line in file.lines() {
-            let mut words = match line {
-                Ok(ref line) => words(line),
+            let mut parser = match line {
+                Ok(ref line) => Parser(line.split_whitespace().filter(|s| !s.is_empty())),
                 Err(err) => panic!("failed to readline {:?}", err)
             };
-            let first = words.next();
-            match first {
+            match parser.0.next() {
                 Some("newmtl") => {
-                    if material.is_some() {
-                        mtl.materials.push(material.take().unwrap());
-                    }
+                    mtl.materials.extend(material.take());
                     material = Some(Material::new(
-                        words.next().expect("Failed to read name").to_string()
+                        parser.0.next().expect("Failed to read name").to_string()
                     ))
                 }
                 Some("Ka") => {
-                    match material {
-                        Some(ref mut m) => { m.ka = to_vec(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.ka = parser.get_vec();
                     }
                 }
                 Some("Kd") => {
-                    match material {
-                        Some(ref mut m) => { m.kd = to_vec(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.kd = parser.get_vec();
                     }
                 }
                 Some("Ks") => {
-                    match material {
-                        Some(ref mut m) => { m.ks = to_vec(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.ks = parser.get_vec();
                     }
                 }
                 Some("Ke") => {
-                    match material {
-                        Some(ref mut m) => { m.ke = to_vec(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.ke = parser.get_vec();
                     }
                 }
                 Some("Ns") => {
-                    match material {
-                        Some(ref mut m) => { m.ns = to_f32(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.ns = parser.get_f32();
                     }
                 }
                 Some("Ni") => {
-                    match material {
-                        Some(ref mut m) => { m.ni = to_f32(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.ni = parser.get_f32();
                     }
                 }
                 Some("Km") => {
-                    match material {
-                        Some(ref mut m) => { m.km = to_f32(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.km = parser.get_f32();
                     }
                 }
                 Some("d") => {
-                    match material {
-                        Some(ref mut m) => { m.d = to_f32(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.d = parser.get_f32();
                     }
                 }
                 Some("Tr") => {
-                    match material {
-                        Some(ref mut m) => { m.tr = to_f32(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.tr = parser.get_f32();
                     }
                 }
                 Some("Tf") => {
-                    match material {
-                        Some(ref mut m) => { m.tf = to_vec(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.tf = parser.get_vec();
                     }
                 }
                 Some("illum") => {
-                    match material {
-                        Some(ref mut m) => { m.illum = to_i32(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.illum = parser.get_i32();
                     }
                 }
                 Some("map_Ka") => {
-                    match material {
-                        Some(ref mut m) => { m.map_ka = to_string(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.map_ka = parser.get_string();
                     }
                 }
                 Some("map_Kd") => {
-                    match material {
-                        Some(ref mut m) => { m.map_kd = to_string(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.map_kd = parser.get_string();
                     }
                 }
                 Some("map_Ks") => {
-                    match material {
-                        Some(ref mut m) => { m.map_ks = to_string(&mut words); }
-                        None => ()
+                    if let Some(ref mut m) = material {
+                        m.map_ks = parser.get_string();
                     }
                 }
                 Some("map_d") => {
-                    match material {
-                        Some(ref mut m) => { m.map_d = to_string(&mut words); }
-                        None => ()                        
+                    if let Some(ref mut m) = material {
+                        m.map_d = parser.get_string();
                     }
                 }
                 Some("map_refl") => {
-                    match material {
-                        Some(ref mut m) => { m.map_refl = to_string(&mut words); }
-                        None => ()                        
+                    if let Some(ref mut m) = material {
+                        m.map_refl = parser.get_string();
                     }
                 }
                 Some("map_bump") | Some("map_Bump") | Some("bump") => {
-                    match material {
-                        Some(ref mut m) => { m.map_bump = to_string(&mut words); }
-                        None => ()
-                    }                   
+                    if let Some(ref mut m) = material {
+                        m.map_bump = parser.get_string();
+                    }
                 }
                 Some("#") | None => {},
                 other => {

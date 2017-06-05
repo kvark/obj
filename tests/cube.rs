@@ -1,4 +1,4 @@
-//   Copyright 2014 Colin Sherratt
+//   Copyright 2017 GFX Developers
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -12,15 +12,15 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 extern crate genmesh;
 extern crate obj;
 
 use std::io::BufReader;
 use obj::{Obj, SimplePolygon};
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 use obj::IndexTuple;
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 use genmesh::{MapToVertices, Polygon};
 
 static SQUARE: &'static str = "
@@ -39,10 +39,10 @@ static SQUARE_VBO: &'static [[f32; 3]] = &[
 ];
 
 #[test]
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 fn test_load_square() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
-    let obj = Obj::<Polygon<IndexTuple>>::load(&mut reader);
+    let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
 
     let v = obj.position();
 
@@ -54,7 +54,7 @@ fn test_load_square() {
         for g in o.group_iter() {
             let p: Vec<Polygon<([f32;  3],[f32;  2],[f32;  3])>> =
                 g.indices().iter().map(|x| *x)
-                .vertex(|(p, t, n)| 
+                .vertex(|(p, t, n)|
                     (
                         obj.position()[p],
                         t.map_or([0., 0.], |t| obj.texture()[t]),
@@ -71,7 +71,7 @@ fn test_load_square() {
 #[test]
 fn test_load_square_nodeps() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
-    let obj = Obj::<SimplePolygon>::load(&mut reader);
+    let obj = Obj::<String, SimplePolygon>::load(&mut reader);
 
     let v = obj.position();
 
@@ -129,10 +129,10 @@ static CUBE_NAMES: &'static [&'static str] = &[
 
 
 #[test]
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 fn test_load_cube() {
     let mut reader = BufReader::new(CUBE.as_bytes());
-    let obj = Obj::<Polygon<IndexTuple>>::load(&mut reader);
+    let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
 
     let v = obj.position();
 
@@ -151,7 +151,7 @@ fn test_load_cube() {
 #[test]
 fn test_load_cube_nodeps() {
     let mut reader = BufReader::new(CUBE.as_bytes());
-    let obj = Obj::<SimplePolygon>::load(&mut reader);
+    let obj = Obj::<String, SimplePolygon>::load(&mut reader);
 
     let v = obj.position();
 
@@ -233,10 +233,10 @@ f -4 -3 -2 -1
 ";
 
 #[test]
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 fn test_load_cube_negative() {
     let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
-    let obj = Obj::<Polygon<IndexTuple>>::load(&mut reader);
+    let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
 
     let v = obj.position();
 
@@ -248,7 +248,7 @@ fn test_load_cube_negative() {
 #[test]
 fn test_load_cube_negative_nodeps() {
     let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
-    let obj = Obj::<SimplePolygon>::load(&mut reader);
+    let obj = Obj::<String, SimplePolygon>::load(&mut reader);
 
     let v = obj.position();
 

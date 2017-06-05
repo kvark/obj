@@ -1,15 +1,16 @@
 [package]
 
 name = "obj"
-version = "0.4.0"
+version = "0.5.0"
 authors = [
-    "Colin Sherratt <colin.sherratt@gmail.com>",
+    "Coraline Sherratt <cora.sherratt@gmail.com>",
+    "Dzmitry Malyshau <kvarkus@gmail.com>",
 ]
 
 license = "Apache-2.0"
 description = "A package for loading Wavefront .obj files"
-homepage = "https://github.com/csherratt/obj"
-repository = "https://github.com/csherratt/obj"
+homepage = "https://github.com/kvark/obj"
+repository = "https://github.com/kvark/obj"
 
 exclude = [
     "test_assets/*",
@@ -22,7 +23,6 @@ path = "src/lib.rs"
 
 [features]
 default = []
-usegenmesh = ["genmesh"]
 
 [dependencies]
-genmesh = { version = "0.4", optional = true }
+genmesh = { version = "0.5", optional = true }

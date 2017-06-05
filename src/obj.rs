@@ -1,4 +1,4 @@
-//   Copyright 2014 Colin Sherratt
+//   Copyright 2017 GFX Developers
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@ use std::slice::Iter;
 use std::str::FromStr;
 use std::io::{BufRead};
 
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 pub use genmesh::{Triangle, Quad, Polygon};
-use words;
 
 pub type IndexTuple = (usize, Option<usize>, Option<usize>);
 
@@ -32,7 +31,7 @@ impl GenPolygon for SimplePolygon {
     fn new(data: Vec<IndexTuple>) -> Self { data }
 }
 
-#[cfg(feature = "usegenmesh")]
+#[cfg(feature = "genmesh")]
 impl GenPolygon for Polygon<IndexTuple> {
   fn new(gs: Vec<IndexTuple>) -> Self {
       match gs.len() {
@@ -57,7 +56,7 @@ pub struct Object<MTL,P: GenPolygon> {
 }
 
 impl<MTL,P: GenPolygon> Object<MTL,P> {
-    pub fn new(name: String) -> Object<MTL,P> {
+    pub fn new(name: String) -> Self {
         Object {
             name: name,
             groups: Vec::new()
@@ -111,7 +110,7 @@ fn normalize(idx: isize, len: usize) -> usize {
 }
 
 impl<MTL,P: GenPolygon> Obj<MTL,P> {
-    fn new() -> Obj<MTL,P> {
+    fn new() -> Self {
         Obj {
             position: Vec::new(),
             texture: Vec::new(),
@@ -141,24 +140,12 @@ impl<MTL,P: GenPolygon> Obj<MTL,P> {
         &self.materials[..]
     }
 
-    pub fn map<T, F>(self, mut f: F) -> Obj<T,P> where F: FnMut(Group<MTL,P>) -> Group<T,P> {
-        let Obj {
-            position,
-            texture,
-            normal,
-            objects,
-            materials
-        } = self;
-
-        let objects = objects.into_iter()
-            .map(|obj| {
-                let Object {
-                    name,
-                    groups
-                } = obj;
-
-                let groups = groups.into_iter().map(|x| f(x)).collect();
-
+    pub fn map<T, F>(self, mut f: F) -> Obj<T,P>
+    where F: FnMut(Group<MTL,P>) -> Group<T,P>
+    {
+        let objects = self.objects.into_iter()
+            .map(|Object{ name, groups }| {
+                let groups = groups.into_iter().map(|g| f(g)).collect();
                 Object {
                     name: name,
                     groups: groups
@@ -166,13 +153,12 @@ impl<MTL,P: GenPolygon> Obj<MTL,P> {
 
             })
             .collect();
-
         Obj {
-            position: position,
-            texture: texture,
-            normal: normal,
-            objects: objects,
-            materials: materials
+            position: self.position,
+            texture: self.texture,
+            normal: self.normal,
+            objects,
+            materials: self.materials,
         }
     }
 }
@@ -243,8 +229,9 @@ impl<P: GenPolygon> Obj<String, P> {
     }
 
 
-    fn parse_face(&self, groups: &mut ::Words)
-          -> Result<P, String>  {
+    fn parse_face<'a, I>(&self, groups: &mut I) -> Result<P, String>
+    where I: Iterator<Item = &'a str>
+    {
         let mut ret = Vec::with_capacity(3);
         for g in groups {
           let ituple = try!(self.parse_group(g));
@@ -253,14 +240,14 @@ impl<P: GenPolygon> Obj<String, P> {
         Ok(P::new(ret))
     }
 
-    pub fn load<B: BufRead>(input: &mut B) -> Obj<String, P> {
+    pub fn load<B: BufRead>(input: &mut B) -> Self {
         let mut dat = Obj::new();
         let mut object = Object::new("default".to_string());
         let mut group: Option<Group<String, P>> = None;
 
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
-                Ok(ref line) => (line, words(line)),
+                Ok(ref line) => (line, line.split_whitespace().filter(|s| !s.is_empty())),
                 Err(err) => panic!("failed to readline {}", err)
             };
             let first = words.next();
@@ -308,7 +295,6 @@ impl<P: GenPolygon> Obj<String, P> {
                         },
                         None => None
                     };
-                    
 
                     object = if line.len() > 2 {
                         let name = line[1..].trim();
@@ -316,7 +302,6 @@ impl<P: GenPolygon> Obj<String, P> {
                     } else {
                         Object::new("default".to_string())
                     };
-                 
                 },
                 Some("g") => {
                     group = match group {
