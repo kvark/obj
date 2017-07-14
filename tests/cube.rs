@@ -37,7 +37,7 @@ static SQUARE_VBO: &'static [[f32; 3]] = &[[0., 1., 0.], [0., 0., 0.], [1., 0., 
 #[cfg(feature = "genmesh")]
 fn test_load_square() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
-    let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
+    let obj = Obj::<Polygon<IndexTuple>>::load_buf(&mut reader).unwrap();
 
     let v = &obj.position;
 
@@ -47,10 +47,10 @@ fn test_load_square() {
 
     for o in &obj.objects {
         for g in &o.groups {
-            let p: Vec<Polygon<([f32; 3], [f32; 2], [f32; 3])>> = g.indices
+            let p: Vec<Polygon<([f32; 3], [f32; 2], [f32; 3])>> = g.polys
                 .iter()
                 .map(|x| *x)
-                .vertex(|(p, t, n)| {
+                .vertex(|IndexTuple(p, t, n)| {
                     (obj.position[p], t.map_or([0., 0.], |t| obj.texture[t]), n.map_or([1., 0., 0.], |n| obj.normal[n]))
                 })
                 .collect();
@@ -63,7 +63,7 @@ fn test_load_square() {
 #[test]
 fn test_load_square_nodeps() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
-    let obj = Obj::<String, SimplePolygon>::load(&mut reader);
+    let obj = Obj::<SimplePolygon>::load_buf(&mut reader).unwrap();
 
     let v = &obj.position;
 
@@ -124,7 +124,7 @@ static CUBE_NAMES: &'static [&'static str] = &[
 #[cfg(feature = "genmesh")]
 fn test_load_cube() {
     let mut reader = BufReader::new(CUBE.as_bytes());
-    let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
+    let obj = Obj::<Polygon<IndexTuple>>::load_buf(&mut reader).unwrap();
 
     let v = &obj.position;
 
@@ -143,7 +143,7 @@ fn test_load_cube() {
 #[test]
 fn test_load_cube_nodeps() {
     let mut reader = BufReader::new(CUBE.as_bytes());
-    let obj = Obj::<String, SimplePolygon>::load(&mut reader);
+    let obj = Obj::<SimplePolygon>::load_buf(&mut reader).unwrap();
 
     let v = &obj.position;
 
@@ -228,7 +228,7 @@ f -4 -3 -2 -1
 #[cfg(feature = "genmesh")]
 fn test_load_cube_negative() {
     let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
-    let obj = Obj::<String, Polygon<IndexTuple>>::load(&mut reader);
+    let obj = Obj::<Polygon<IndexTuple>>::load_buf(&mut reader).unwrap();
 
     let v = &obj.position;
 
@@ -240,7 +240,7 @@ fn test_load_cube_negative() {
 #[test]
 fn test_load_cube_negative_nodeps() {
     let mut reader = BufReader::new(CUBE_NEGATIVE.as_bytes());
-    let obj = Obj::<String, SimplePolygon>::load(&mut reader);
+    let obj = Obj::<SimplePolygon>::load_buf(&mut reader).unwrap();
 
     let v = &obj.position;
 
