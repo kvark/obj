@@ -12,10 +12,11 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
-
+#[derive(Debug, Clone)]
 pub struct Material {
     pub name: String,
 
@@ -42,7 +43,7 @@ pub struct Material {
 }
 
 impl Material {
-    fn new(name: String) -> Self {
+    pub fn new(name: String) -> Self {
         Material {
             name: name,
             ka: None,
@@ -65,6 +66,13 @@ impl Material {
             map_refl: None,
             illum: None,
         }
+    }
+}
+
+impl<'a> From<Material> for Cow<'a, Material> {
+    #[inline]
+    fn from(s: Material) -> Cow<'a, Material> {
+        Cow::Owned(s)
     }
 }
 
@@ -119,7 +127,6 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
         }
     }
 }
-
 
 pub struct Mtl {
     pub materials: Vec<Material>,
