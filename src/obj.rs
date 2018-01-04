@@ -25,7 +25,7 @@ use std::str::FromStr;
 
 use mtl::{Material, Mtl};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
 pub type SimplePolygon = Vec<IndexTuple>;
 
