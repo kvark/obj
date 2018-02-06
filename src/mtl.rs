@@ -235,10 +235,12 @@ impl Mtl {
                         m.map_bump = parser.get_string();
                     }
                 }
-                Some("#") | None => {}
-                other => {
-                    panic!("unhandled mtl: {:?}", other);
+                Some(other) => {
+                    if !other.starts_with("#") {
+                        panic!("unhandled mtl: {:?}", other);
+                    }
                 }
+                None => {}
             }
         }
 
