@@ -20,7 +20,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use mtl::{Material, Mtl};
@@ -103,6 +103,7 @@ where
     pub normal: Vec<[f32; 3]>,
     pub objects: Vec<Object<'a, P>>,
     pub material_libs: Vec<String>,
+    pub path: PathBuf,
 }
 
 fn normalize(idx: isize, len: usize) -> usize {
@@ -124,12 +125,15 @@ where
             normal: Vec::new(),
             objects: Vec::new(),
             material_libs: Vec::new(),
+            path: PathBuf::new(),
         }
     }
 
     pub fn load(path: &Path) -> io::Result<Obj<P>> {
         let f = File::open(path)?;
-        let obj = Obj::load_buf(&mut BufReader::new(f))?;
+        let mut obj = Obj::load_buf(&mut BufReader::new(f))?;
+        // unwrap is safe as we've read this file before
+        obj.path = path.parent().unwrap().to_owned();
 
         Ok(obj)
     }
@@ -146,7 +150,7 @@ where
         let mut materials = HashMap::new();
 
         for m in &self.material_libs {
-            let file = match File::open(&m) {
+            let file = match File::open(&self.path.join(&m)) {
                 Ok(f) => f,
                 Err(err) => {
                     errs.push((m.clone(), err));
