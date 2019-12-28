@@ -30,22 +30,22 @@ pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
 pub type SimplePolygon = Vec<IndexTuple>;
 
 pub trait GenPolygon: Clone {
-    fn new(data: SimplePolygon) -> Self;
+    fn new(data: SimplePolygon) -> Result<Self,String>;
 }
 
 impl GenPolygon for SimplePolygon {
-    fn new(data: Self) -> Self {
-        data
+    fn new(data: Self) -> Result<Self,String> {
+        Ok(data)
     }
 }
 
 #[cfg(feature = "genmesh")]
 impl GenPolygon for Polygon<IndexTuple> {
-    fn new(gs: SimplePolygon) -> Self {
+    fn new(gs: SimplePolygon) -> Result<Self,String> {
         match gs.len() {
-            3 => Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2])),
-            4 => Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3])),
-            _ => panic!("Unsupported"),
+            3 => Ok(Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2]))),
+            4 => Ok(Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3]))),
+            n => return Err(format!("Unsupported: polygon with {} verts", n)),
         }
     }
 }
@@ -251,7 +251,7 @@ where
             let ituple = self.parse_group(g)?;
             ret.push(ituple);
         }
-        Ok(P::new(ret))
+        P::new(ret)
     }
 
     pub fn load_buf<B>(input: &mut B) -> io::Result<Self>
