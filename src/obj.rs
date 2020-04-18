@@ -72,6 +72,9 @@ pub enum ObjError {
         line_number: usize,
         command: String,
     },
+    MissingMTLName {
+        line_number: usize,
+    },
     #[cfg(feature = "genmesh")]
     GenMeshTooManyVertsInPolygon{
         line_number: usize,
@@ -347,8 +350,18 @@ where
                     }
                 }
                 Some("mtllib") => {
-                    let name = words.next().expect("Failed to find name for mtllib");
-                    dat.material_libs.push(name.to_string());
+                    // Obj strictly does not allow spaces in filenames.
+                    // "mtllib Some File.mtl" is forbidden.
+                    // However, everyone does it anyway and if we want to ingest blender-outputted files, we need to support it.
+                    // This works by walking word by word and combining them with a space in between. This may not be a totally
+                    // accurate way to do it, but until the parser can be re-worked, this is good-enough, better-than-before solution.
+                    let first_word = words.next().ok_or_else(|| ObjError::MissingMTLName {line_number: idx})?.to_string();
+                    let name = words.fold(first_word, |mut existing, next| {
+                        existing.push(' ');
+                        existing.push_str(next);
+                        existing
+                    });
+                    dat.material_libs.push(name);
                 }
                 Some("usemtl") => {
                     let mut g = match group {
