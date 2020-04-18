@@ -15,7 +15,7 @@
 #[cfg(feature = "genmesh")]
 extern crate genmesh;
 
-pub use mtl::{Material, Mtl};
+pub use mtl::{Material, Mtl, MtlError, MtlMissingType};
 pub use obj::{GenPolygon, Group, IndexTuple, Obj, Object, SimplePolygon, ObjError};
 
 mod obj;

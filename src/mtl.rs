@@ -70,20 +70,29 @@ impl Material {
     }
 }
 
+/// Indicates type of a missing value
 #[derive(Debug)]
-pub enum MissingType {
+pub enum MtlMissingType {
+    /// i32
     Tyi32,
+    /// f32
     Tyf32,
+    /// String
     TyString,
 }
 
+/// Errors parsing or loading a .mtl file.
 #[derive(Debug)]
 pub enum MtlError {
     IoError(io::Error),
+    /// Given instruction was not in .mtl spec.
     InvalidInstruction(String),
+    /// Attempted to parse value, but failed.
     InvalidValue(String),
+    /// `newmtl` issued, but no name provided.
     MissingMaterialName,
-    MissingValue(MissingType),
+    /// Instruction requires a value, but that value was not provided.
+    MissingValue(MtlMissingType),
 }
 
 impl From<io::Error> for MtlError {
@@ -122,7 +131,7 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
         match self.0.next() {
             Some(v) => FromStr::from_str(v).map_err(|_| MtlError::InvalidValue(v.to_string())),
             None => {
-                Err(MtlError::MissingValue(MissingType::Tyi32))
+                Err(MtlError::MissingValue(MtlMissingType::Tyi32))
             }
         }
     }
@@ -131,7 +140,7 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
         match self.0.next() {
             Some(v) => FromStr::from_str(v).map_err(|_| MtlError::InvalidValue(v.to_string())),
             None => {
-                Err(MtlError::MissingValue(MissingType::Tyf32))
+                Err(MtlError::MissingValue(MtlMissingType::Tyf32))
             }
         }
     }
@@ -147,7 +156,7 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
                 }))
             },
             None => {
-                Err(MtlError::MissingValue(MissingType::TyString))
+                Err(MtlError::MissingValue(MtlMissingType::TyString))
             }
         }
     }
