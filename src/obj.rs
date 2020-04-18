@@ -57,24 +57,31 @@ impl GenPolygon for Polygon<IndexTuple> {
     }
 }
 
+/// Errors parsing or loading a .obj file.
 #[derive(Debug)]
 pub enum ObjError {
     IoError(io::Error),
-    PoorlyFormedFaceGroup {
+    /// One of the arguments to `f` is malformed.
+    MalformedFaceGroup {
         line_number: usize,
         group: String,
     },
+    /// An argument list either has unparsable arguments or is
+    /// missing one or more arguments.
     ArgumentListFailure {
         line_number: usize,
         list: String,
     },
+    /// Command found that is not in the .obj spec.
     UnexpectedCommand {
         line_number: usize,
         command: String,
     },
+    /// `mtllib` command issued, but no name was specified.
     MissingMTLName {
         line_number: usize,
     },
+    /// [`genmesh::Polygon`] only supports triangles and squares.
     #[cfg(feature = "genmesh")]
     GenMeshTooManyVertsInPolygon{
         line_number: usize,
@@ -265,7 +272,7 @@ where
                               v.map(|v| normalize(v, self.texture.len())),
                               n.map(|n| normalize(n, self.normal.len()))))
             }
-            _ => Err(ObjError::PoorlyFormedFaceGroup {line_number, group: String::from(group)}),
+            _ => Err(ObjError::MalformedFaceGroup {line_number, group: String::from(group)}),
         }
     }
 
