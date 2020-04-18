@@ -23,7 +23,7 @@ use std::io::{self, BufRead, BufReader, Error};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use mtl::{Material, Mtl};
+use mtl::{Material, Mtl, MtlError};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
@@ -176,6 +176,12 @@ where
         Ok(obj)
     }
 
+    fn load_single_mtl(base_path: impl AsRef<Path>, mtllib: &str) -> Result<Vec<Material>, MtlError> {
+        let file = File::open(&base_path.as_ref().join(&mtllib))?;
+        let mtl = Mtl::load(&mut BufReader::new(file))?;
+        Ok(mtl.materials)
+    }
+
     /// Loads the .mtl files referenced in the .obj file.
     ///
     /// If it encounters an error for an .mtl, it appends its error to the
@@ -183,22 +189,21 @@ where
     ///
     /// The Result Err value format is a Vec, which items are tuples with first
     /// index being the the .mtl file and the second its corresponding error.
-    pub fn load_mtls(&mut self) -> Result<(), Vec<(String, io::Error)>> {
+    pub fn load_mtls(&mut self) -> Result<(), Vec<(String, MtlError)>> {
         let mut errs = Vec::new();
         let mut materials = HashMap::new();
 
         for m in &self.material_libs {
-            let file = match File::open(&self.path.join(&m)) {
-                Ok(f) => f,
+            match Self::load_single_mtl(&self.path, m) {
+                Ok(mtl_materials) => {
+                    for m in mtl_materials {
+                        materials.insert(m.name.clone(), Cow::from(m));
+                    }
+                },
                 Err(err) => {
                     errs.push((m.clone(), err));
-                    continue;
-                }
+                },
             };
-            let mtl = Mtl::load(&mut BufReader::new(file));
-            for m in mtl.materials {
-                materials.insert(m.name.clone(), Cow::from(m));
-            }
         }
 
         for object in &mut self.objects {

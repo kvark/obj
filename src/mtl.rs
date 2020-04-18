@@ -13,8 +13,9 @@
 //   limitations under the License.
 
 use std::borrow::Cow;
-use std::io::BufRead;
+use std::io::{BufRead, Error};
 use std::str::FromStr;
+use std::io;
 
 #[derive(Debug, Clone)]
 pub struct Material {
@@ -69,6 +70,28 @@ impl Material {
     }
 }
 
+#[derive(Debug)]
+pub enum MissingType {
+    Tyi32,
+    Tyf32,
+    TyString,
+}
+
+#[derive(Debug)]
+pub enum MtlError {
+    IoError(io::Error),
+    InvalidInstruction(String),
+    InvalidValue(String),
+    MissingMaterialName,
+    MissingValue(MissingType),
+}
+
+impl From<io::Error> for MtlError {
+    fn from(e: Error) -> Self {
+        Self::IoError(e)
+    }
+}
+
 impl<'a> From<Material> for Cow<'a, Material> {
     #[inline]
     fn from(s: Material) -> Cow<'a, Material> {
@@ -79,50 +102,52 @@ impl<'a> From<Material> for Cow<'a, Material> {
 struct Parser<I>(I);
 
 impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
-    fn get_vec(&mut self) -> Option<[f32; 3]> {
+    fn get_vec(mut self) -> Result<[f32; 3], MtlError> {
         let (x, y, z) = match (self.0.next(), self.0.next(), self.0.next()) {
             (Some(x), Some(y), Some(z)) => (x, y, z),
             other => {
-                println!("invalid {:?}", other);
-                return None;
+                return Err(MtlError::InvalidValue(format!("{:?}", other)));
             }
         };
 
         match (x.parse::<f32>(), y.parse::<f32>(), z.parse::<f32>()) {
-            (Ok(x), Ok(y), Ok(z)) => Some([x, y, z]),
+            (Ok(x), Ok(y), Ok(z)) => Ok([x, y, z]),
             other => {
-                println!("invalid {:?}", other);
-                None
+                Err(MtlError::InvalidValue(format!("{:?}", other)))
             }
         }
     }
 
-    fn get_i32(&mut self) -> Option<i32> {
+    fn get_i32(mut self) -> Result<i32, MtlError> {
         match self.0.next() {
-            Some(v) => FromStr::from_str(v).ok(),
+            Some(v) => FromStr::from_str(v).map_err(|_| MtlError::InvalidValue(v.to_string())),
             None => {
-                println!("missing i32");
-                None
+                Err(MtlError::MissingValue(MissingType::Tyi32))
             }
         }
     }
 
-    fn get_f32(&mut self) -> Option<f32> {
+    fn get_f32(mut self) -> Result<f32, MtlError> {
         match self.0.next() {
-            Some(v) => FromStr::from_str(v).ok(),
+            Some(v) => FromStr::from_str(v).map_err(|_| MtlError::InvalidValue(v.to_string())),
             None => {
-                println!("missing f32");
-                None
+                Err(MtlError::MissingValue(MissingType::Tyf32))
             }
         }
     }
 
-    fn get_string(&mut self) -> Option<String> {
+    fn get_string(mut self) -> Result<String, MtlError> {
         match self.0.next() {
-            Some(v) => Some(v.to_string()),
+            Some(v) => {
+                // See note on mtllib parsing in obj.rs for why this is needed/works
+                Ok(self.0.fold(v.to_string(), |mut existing, next| {
+                    existing.push(' ');
+                    existing.push_str(next);
+                    existing
+                }))
+            },
             None => {
-                println!("missing String");
-                None
+                Err(MtlError::MissingValue(MissingType::TyString))
             }
         }
     }
@@ -137,117 +162,117 @@ impl Mtl {
         Mtl { materials: Vec::new() }
     }
 
-    pub fn load<B: BufRead>(file: &mut B) -> Self {
+    pub fn load<B: BufRead>(file: &mut B) -> Result<Self, MtlError> {
         let mut mtl = Mtl::new();
         let mut material = None;
         for line in file.lines() {
             let mut parser = match line {
                 Ok(ref line) => Parser(line.split_whitespace().filter(|s| !s.is_empty())),
-                Err(err) => panic!("failed to readline {:?}", err),
+                Err(err) => return Err(MtlError::IoError(err)),
             };
             match parser.0.next() {
                 Some("newmtl") => {
                     mtl.materials.extend(material.take());
-                    material = Some(Material::new(parser.0.next().expect("Failed to read name").to_string()))
+                    material = Some(Material::new(parser.0.next().ok_or_else(|| MtlError::MissingMaterialName)?.to_string()));
                 }
                 Some("Ka") => {
                     if let Some(ref mut m) = material {
-                        m.ka = parser.get_vec();
+                        m.ka = Some(parser.get_vec()?);
                     }
                 }
                 Some("Kd") => {
                     if let Some(ref mut m) = material {
-                        m.kd = parser.get_vec();
+                        m.kd = Some(parser.get_vec()?);
                     }
                 }
                 Some("Ks") => {
                     if let Some(ref mut m) = material {
-                        m.ks = parser.get_vec();
+                        m.ks = Some(parser.get_vec()?);
                     }
                 }
                 Some("Ke") => {
                     if let Some(ref mut m) = material {
-                        m.ke = parser.get_vec();
+                        m.ke = Some(parser.get_vec()?);
                     }
                 }
                 Some("Ns") => {
                     if let Some(ref mut m) = material {
-                        m.ns = parser.get_f32();
+                        m.ns = Some(parser.get_f32()?);
                     }
                 }
                 Some("Ni") => {
                     if let Some(ref mut m) = material {
-                        m.ni = parser.get_f32();
+                        m.ni = Some(parser.get_f32()?);
                     }
                 }
                 Some("Km") => {
                     if let Some(ref mut m) = material {
-                        m.km = parser.get_f32();
+                        m.km = Some(parser.get_f32()?);
                     }
                 }
                 Some("d") => {
                     if let Some(ref mut m) = material {
-                        m.d = parser.get_f32();
+                        m.d = Some(parser.get_f32()?);
                     }
                 }
                 Some("Tr") => {
                     if let Some(ref mut m) = material {
-                        m.tr = parser.get_f32();
+                        m.tr = Some(parser.get_f32()?);
                     }
                 }
                 Some("Tf") => {
                     if let Some(ref mut m) = material {
-                        m.tf = parser.get_vec();
+                        m.tf = Some(parser.get_vec()?);
                     }
                 }
                 Some("illum") => {
                     if let Some(ref mut m) = material {
-                        m.illum = parser.get_i32();
+                        m.illum = Some(parser.get_i32()?);
                     }
                 }
                 Some("map_Ka") => {
                     if let Some(ref mut m) = material {
-                        m.map_ka = parser.get_string();
+                        m.map_ka = Some(parser.get_string()?);
                     }
                 }
                 Some("map_Kd") => {
                     if let Some(ref mut m) = material {
-                        m.map_kd = parser.get_string();
+                        m.map_kd = Some(parser.get_string()?);
                     }
                 }
                 Some("map_Ks") => {
                     if let Some(ref mut m) = material {
-                        m.map_ks = parser.get_string();
+                        m.map_ks = Some(parser.get_string()?);
                     }
                 }
                 Some("map_d") => {
                     if let Some(ref mut m) = material {
-                        m.map_d = parser.get_string();
+                        m.map_d = Some(parser.get_string()?);
                     }
                 }
                 Some("map_refl") => {
                     if let Some(ref mut m) = material {
-                        m.map_refl = parser.get_string();
+                        m.map_refl = Some(parser.get_string()?);
                     }
                 }
                 Some("map_bump") | Some("map_Bump") | Some("bump") => {
                     if let Some(ref mut m) = material {
-                        m.map_bump = parser.get_string();
+                        m.map_bump = Some(parser.get_string()?);
                     }
                 }
                 Some(other) => {
                     if !other.starts_with("#") {
-                        panic!("unhandled mtl: {:?}", other);
+                        return Err(MtlError::InvalidInstruction(other.to_string()));
                     }
                 }
                 None => {}
             }
         }
 
-        if material.is_some() {
-            mtl.materials.push(material.take().unwrap());
+        if let Some(material) = material {
+            mtl.materials.push(material);
         }
 
-        mtl
+        Ok(mtl)
     }
 }
