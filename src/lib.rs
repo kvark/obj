@@ -16,7 +16,7 @@
 extern crate genmesh;
 
 pub use mtl::{Material, Mtl};
-pub use obj::{GenPolygon, Group, IndexTuple, Obj, Object, SimplePolygon};
+pub use obj::{GenPolygon, Group, IndexTuple, Obj, Object, SimplePolygon, ObjError};
 
 mod obj;
 mod mtl;
