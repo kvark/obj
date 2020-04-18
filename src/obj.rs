@@ -183,9 +183,12 @@ where
         Ok(obj)
     }
 
-    fn load_single_mtl(base_path: impl AsRef<Path>, mtllib: &str) -> Result<Vec<Material>, MtlError> {
-        let file = File::open(&base_path.as_ref().join(&mtllib))?;
-        let mtl = Mtl::load(&mut BufReader::new(file))?;
+    fn load_single_mtl<R, F>(base_path: impl AsRef<Path>, mtllib: &str, resolve: &mut F) -> Result<Vec<Material>, MtlError>
+        where
+            R: io::BufRead,
+            F: FnMut(&Path, &str) -> io::Result<R>  {
+        let mut file = resolve(base_path.as_ref(), mtllib)?;
+        let mtl = Mtl::load(&mut file)?;
         Ok(mtl.materials)
     }
 
@@ -197,11 +200,31 @@ where
     /// The Result Err value format is a Vec, which items are tuples with first
     /// index being the the .mtl file and the second its corresponding error.
     pub fn load_mtls(&mut self) -> Result<(), Vec<(String, MtlError)>> {
+        self.load_mtls_fn(|base_path, mtllib| File::open(&base_path.join(mtllib)).map(BufReader::new))
+    }
+
+    /// Loads the .mtl files referenced in the .obj file with user provided loading logic.
+    ///
+    /// See also [`load_mtls`].
+    ///
+    /// The provided function must take two arguments:
+    ///  - `&Path` - The parent directory of the .obj file
+    ///  - `&str`  - The name of the mtllib as listed in the file.
+    ///
+    /// It must return:
+    ///  - Anything that implements [`io::BufRead`] that yields the contents of the intended .mtl file.
+    ///
+    /// [`load_mtls`]: #method.load_mtls
+    /// [`io::BufRead`]: https://doc.rust-lang.org/std/io/trait.BufRead.html
+    pub fn load_mtls_fn<R, F>(&mut self, mut resolve: F) -> Result<(), Vec<(String, MtlError)>>
+        where
+            R: io::BufRead,
+            F: FnMut(&Path, &str) -> io::Result<R> {
         let mut errs = Vec::new();
         let mut materials = HashMap::new();
 
         for m in &self.material_libs {
-            match Self::load_single_mtl(&self.path, m) {
+            match Self::load_single_mtl(&self.path, m, &mut resolve) {
                 Ok(mtl_materials) => {
                     for m in mtl_materials {
                         materials.insert(m.name.clone(), Cow::from(m));
