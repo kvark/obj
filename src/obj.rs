@@ -19,7 +19,7 @@ pub use genmesh::{Polygon, Quad, Triangle};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, Error};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -30,30 +30,58 @@ pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
 pub type SimplePolygon = Vec<IndexTuple>;
 
 pub trait GenPolygon: Clone {
-    fn new(data: SimplePolygon) -> Self;
-    fn try_new(data: SimplePolygon) -> Result<Self,String>;
+    fn new(line_number: usize, data: SimplePolygon) -> Self;
+    fn try_new(line_number: usize, data: SimplePolygon) -> Result<Self,ObjError>;
 }
 
 impl GenPolygon for SimplePolygon {
-    fn new(data: Self) -> Self {
+    fn new(_line_number: usize, data: Self) -> Self {
         data
     }
-    fn try_new(data: SimplePolygon) -> Result<Self,String> {
+    fn try_new(_line_number: usize, data: SimplePolygon) -> Result<Self,ObjError> {
         Ok(data)
     }
 }
 
 #[cfg(feature = "genmesh")]
 impl GenPolygon for Polygon<IndexTuple> {
-    fn new(gs: SimplePolygon) -> Self {
-        Polygon::<IndexTuple>::try_new(gs).unwrap()
+    fn new(line_number: usize, gs: SimplePolygon) -> Self {
+        Polygon::<IndexTuple>::try_new(line_number, gs).unwrap()
     }
-    fn try_new(gs: SimplePolygon) -> Result<Self,String> {
+    fn try_new(line_number: usize, gs: SimplePolygon) -> Result<Self,ObjError> {
         match gs.len() {
             3 => Ok(Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2]))),
             4 => Ok(Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3]))),
-            n => return Err(format!("Unsupported: polygon with {} verts", n)),
+            n => return Err(ObjError::GenMeshTooManyVertsInPolygon {line_number, vert_count}),
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum ObjError {
+    IoError(io::Error),
+    PoorlyFormedFaceGroup {
+        line_number: usize,
+        group: String,
+    },
+    ArgumentListFailure {
+        line_number: usize,
+        list: String,
+    },
+    UnexpectedCommand {
+        line_number: usize,
+        command: String,
+    },
+    #[cfg(feature = "genmesh")]
+    GenMeshTooManyVertsInPolygon{
+        line_number: usize,
+        vert_count: usize,
+    }
+}
+
+impl From<io::Error> for ObjError {
+    fn from(e: Error) -> Self {
+        Self::IoError(e)
     }
 }
 
@@ -136,7 +164,7 @@ where
         }
     }
 
-    pub fn load(path: &Path) -> io::Result<Obj<P>> {
+    pub fn load(path: &Path) -> Result<Obj<P>, ObjError> {
         let f = File::open(path)?;
         let mut obj = Obj::load_buf(&mut BufReader::new(f))?;
         // unwrap is safe as we've read this file before
@@ -184,55 +212,39 @@ where
         if errs.is_empty() { Ok(()) } else { Err(errs) }
     }
 
-    fn parse_vertex(&mut self, v0: Option<&str>, v1: Option<&str>, v2: Option<&str>) {
-        let (v0, v1, v2) = match (v0, v1, v2) {
-            (Some(v0), Some(v1), Some(v2)) => (v0, v1, v2),
+    fn parse_two(line_number: usize, n0: Option<&str>, n1: Option<&str>) -> Result<[f32; 2], ObjError> {
+        let (n0, n1) = match (n0, n1) {
+            (Some(n0), Some(n1)) => (n0, n1),
             _ => {
-                panic!("could not parse line {:?} {:?} {:?}", v0, v1, v2);
+                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?}", n0, n1)});
             }
         };
-        let vertex = match (FromStr::from_str(v0), FromStr::from_str(v1), FromStr::from_str(v2)) {
-            (Ok(v0), Ok(v1), Ok(v2)) => [v0, v1, v2],
+        let normal = match (FromStr::from_str(n0), FromStr::from_str(n1)) {
+            (Ok(n0), Ok(n1)) => [n0, n1],
             _ => {
-                panic!("could not parse line {:?} {:?} {:?}", v0, v1, v2);
+                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?}", n0, n1)});
             }
         };
-        self.position.push(vertex);
+        Ok(normal)
     }
 
-    fn parse_texture(&mut self, t0: Option<&str>, t1: Option<&str>) {
-        let (t0, t1) = match (t0, t1) {
-            (Some(t0), Some(t1)) => (t0, t1),
-            _ => {
-                panic!("could not parse line {:?} {:?}", t0, t1);
-            }
-        };
-        let texture = match (FromStr::from_str(t0), FromStr::from_str(t1)) {
-            (Ok(t0), Ok(t1)) => [t0, t1],
-            _ => {
-                panic!("could not parse line {:?} {:?}", t0, t1);
-            }
-        };
-        self.texture.push(texture);
-    }
-
-    fn parse_normal(&mut self, n0: Option<&str>, n1: Option<&str>, n2: Option<&str>) {
+    fn parse_three(line_number: usize, n0: Option<&str>, n1: Option<&str>, n2: Option<&str>) -> Result<[f32; 3], ObjError> {
         let (n0, n1, n2) = match (n0, n1, n2) {
             (Some(n0), Some(n1), Some(n2)) => (n0, n1, n2),
             _ => {
-                panic!("could not parse line {:?} {:?} {:?}", n0, n1, n2);
+                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?} {:?}", n0, n1, n2)});
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
             (Ok(n0), Ok(n1), Ok(n2)) => [n0, n1, n2],
             _ => {
-                panic!("could not parse line {:?} {:?} {:?}", n0, n1, n2);
+                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?} {:?}", n0, n1, n2)});
             }
         };
-        self.normal.push(normal);
+        Ok(normal)
     }
 
-    fn parse_group(&self, group: &str) -> Result<IndexTuple, String> {
+    fn parse_group(&self, line_number: usize, group: &str) -> Result<IndexTuple, ObjError> {
         let mut group_split = group.split('/');
         let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
         let t: Option<isize> =
@@ -245,23 +257,23 @@ where
                               v.map(|v| normalize(v, self.texture.len())),
                               n.map(|n| normalize(n, self.normal.len()))))
             }
-            _ => Err(format!("poorly formed group {}", group)),
+            _ => Err(ObjError::PoorlyFormedFaceGroup {line_number, group: String::from(group)}),
         }
     }
 
-    fn parse_face<'b, I>(&self, groups: &mut I) -> Result<P, String>
+    fn parse_face<'b, I>(&self, line_number: usize, groups: &mut I) -> Result<P, ObjError>
     where
         I: Iterator<Item = &'b str>,
     {
         let mut ret = Vec::with_capacity(3);
         for g in groups {
-            let ituple = self.parse_group(g)?;
+            let ituple = self.parse_group(line_number,g)?;
             ret.push(ituple);
         }
-        P::try_new(ret)
+        P::try_new(line_number, ret)
     }
 
-    pub fn load_buf<B>(input: &mut B) -> io::Result<Self>
+    pub fn load_buf<B>(input: &mut B) -> Result<Self, ObjError>
     where
         B: BufRead,
     {
@@ -273,8 +285,7 @@ where
             let (line, mut words) = match line {
                 Ok(ref line) => (line.clone(), line.split_whitespace().filter(|s| !s.is_empty())),
                 Err(err) => {
-                    return Err(io::Error::new(io::ErrorKind::InvalidData,
-                                              format!("failed to readline {}", err)))
+                    return Err(ObjError::IoError(io::Error::new(io::ErrorKind::InvalidData, format!("failed to readline {}", err))));
                 }
             };
             let first = words.next();
@@ -282,24 +293,18 @@ where
             match first {
                 Some("v") => {
                     let (v0, v1, v2) = (words.next(), words.next(), words.next());
-                    dat.parse_vertex(v0, v1, v2);
+                    dat.position.push(Self::parse_three(idx, v0, v1, v2)?);
                 }
                 Some("vt") => {
                     let (t0, t1) = (words.next(), words.next());
-                    dat.parse_texture(t0, t1);
+                    dat.texture.push(Self::parse_two(idx, t0, t1)?);
                 }
                 Some("vn") => {
                     let (n0, n1, n2) = (words.next(), words.next(), words.next());
-                    dat.parse_normal(n0, n1, n2);
+                    dat.normal.push(Self::parse_three(idx, n0, n1, n2)?);
                 }
                 Some("f") => {
-                    let poly = match dat.parse_face(&mut words) {
-                        Err(e) => {
-                            return Err(io::Error::new(io::ErrorKind::InvalidData,
-                                                      format!("could not parse line: {}\nline: {}: {}", e, idx, line)))
-                        }
-                        Ok(poly) => poly,
-                    };
+                    let poly = dat.parse_face(idx, &mut words)?;
                     group = Some(match group {
                                      None => {
                                          let mut g = Group::new("default".to_string());
@@ -364,9 +369,10 @@ where
                     group = Some(g);
                 }
                 Some("s") => (),
+                Some("l") => (),
                 Some(other) => {
                     if !other.starts_with("#") {
-                        panic!("Invalid token {:?} {:?}", other, words.next());
+                        return Err(ObjError::UnexpectedCommand {line_number: idx, command: other.to_string()})
                     }
                 }
                 None => (),
