@@ -20,5 +20,5 @@ use std::path::Path;
 #[test]
 fn load_test_file() {
     let mut sponza = Obj::<SimplePolygon>::load(&Path::new("test_assets/sponza.obj")).unwrap();
-    let _ = sponza.load_mtls();
+    let _ = sponza.load_mtls().unwrap();
 }
