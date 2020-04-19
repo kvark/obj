@@ -145,7 +145,7 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
         }
     }
 
-    fn get_string(mut self) -> Result<String, MtlError> {
+    fn into_string(mut self) -> Result<String, MtlError> {
         match self.0.next() {
             Some(v) => {
                 // See note on mtllib parsing in obj.rs for why this is needed/works
@@ -241,32 +241,32 @@ impl Mtl {
                 }
                 Some("map_Ka") => {
                     if let Some(ref mut m) = material {
-                        m.map_ka = Some(parser.get_string()?);
+                        m.map_ka = Some(parser.into_string()?);
                     }
                 }
                 Some("map_Kd") => {
                     if let Some(ref mut m) = material {
-                        m.map_kd = Some(parser.get_string()?);
+                        m.map_kd = Some(parser.into_string()?);
                     }
                 }
                 Some("map_Ks") => {
                     if let Some(ref mut m) = material {
-                        m.map_ks = Some(parser.get_string()?);
+                        m.map_ks = Some(parser.into_string()?);
                     }
                 }
                 Some("map_d") => {
                     if let Some(ref mut m) = material {
-                        m.map_d = Some(parser.get_string()?);
+                        m.map_d = Some(parser.into_string()?);
                     }
                 }
                 Some("map_refl") => {
                     if let Some(ref mut m) = material {
-                        m.map_refl = Some(parser.get_string()?);
+                        m.map_refl = Some(parser.into_string()?);
                     }
                 }
                 Some("map_bump") | Some("map_Bump") | Some("bump") => {
                     if let Some(ref mut m) = material {
-                        m.map_bump = Some(parser.get_string()?);
+                        m.map_bump = Some(parser.into_string()?);
                     }
                 }
                 Some(other) => {
