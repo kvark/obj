@@ -52,7 +52,7 @@ impl GenPolygon for Polygon<IndexTuple> {
         match gs.len() {
             3 => Ok(Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2]))),
             4 => Ok(Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3]))),
-            n => return Err(ObjError::GenMeshTooManyVertsInPolygon {line_number, vert_count}),
+            n => return Err(ObjError::GenMeshTooManyVertsInPolygon {line_number, vert_count: n}),
         }
     }
 }
