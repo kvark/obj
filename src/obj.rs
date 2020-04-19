@@ -60,7 +60,7 @@ impl GenPolygon for Polygon<IndexTuple> {
 /// Errors parsing or loading a .obj file.
 #[derive(Debug)]
 pub enum ObjError {
-    IoError(io::Error),
+    Io(io::Error),
     /// One of the arguments to `f` is malformed.
     MalformedFaceGroup {
         line_number: usize,
@@ -86,12 +86,12 @@ pub enum ObjError {
     GenMeshTooManyVertsInPolygon{
         line_number: usize,
         vert_count: usize,
-    }
+    },
 }
 
 impl From<io::Error> for ObjError {
     fn from(e: Error) -> Self {
-        Self::IoError(e)
+        Self::Io(e)
     }
 }
 
@@ -300,7 +300,7 @@ where
             let (line, mut words) = match line {
                 Ok(ref line) => (line.clone(), line.split_whitespace().filter(|s| !s.is_empty())),
                 Err(err) => {
-                    return Err(ObjError::IoError(io::Error::new(io::ErrorKind::InvalidData, format!("failed to readline {}", err))));
+                    return Err(ObjError::Io(io::Error::new(io::ErrorKind::InvalidData, format!("failed to readline {}", err))));
                 }
             };
             let first = words.next();

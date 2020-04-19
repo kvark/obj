@@ -74,17 +74,17 @@ impl Material {
 #[derive(Debug)]
 pub enum MtlMissingType {
     /// i32
-    Tyi32,
+    I32,
     /// f32
-    Tyf32,
+    F32,
     /// String
-    TyString,
+    String,
 }
 
 /// Errors parsing or loading a .mtl file.
 #[derive(Debug)]
 pub enum MtlError {
-    IoError(io::Error),
+    Io(io::Error),
     /// Given instruction was not in .mtl spec.
     InvalidInstruction(String),
     /// Attempted to parse value, but failed.
@@ -97,7 +97,7 @@ pub enum MtlError {
 
 impl From<io::Error> for MtlError {
     fn from(e: Error) -> Self {
-        Self::IoError(e)
+        Self::Io(e)
     }
 }
 
@@ -111,7 +111,7 @@ impl<'a> From<Material> for Cow<'a, Material> {
 struct Parser<I>(I);
 
 impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
-    fn get_vec(mut self) -> Result<[f32; 3], MtlError> {
+    fn get_vec(&mut self) -> Result<[f32; 3], MtlError> {
         let (x, y, z) = match (self.0.next(), self.0.next(), self.0.next()) {
             (Some(x), Some(y), Some(z)) => (x, y, z),
             other => {
@@ -127,20 +127,20 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
         }
     }
 
-    fn get_i32(mut self) -> Result<i32, MtlError> {
+    fn get_i32(&mut self) -> Result<i32, MtlError> {
         match self.0.next() {
             Some(v) => FromStr::from_str(v).map_err(|_| MtlError::InvalidValue(v.to_string())),
             None => {
-                Err(MtlError::MissingValue(MtlMissingType::Tyi32))
+                Err(MtlError::MissingValue(MtlMissingType::I32))
             }
         }
     }
 
-    fn get_f32(mut self) -> Result<f32, MtlError> {
+    fn get_f32(&mut self) -> Result<f32, MtlError> {
         match self.0.next() {
             Some(v) => FromStr::from_str(v).map_err(|_| MtlError::InvalidValue(v.to_string())),
             None => {
-                Err(MtlError::MissingValue(MtlMissingType::Tyf32))
+                Err(MtlError::MissingValue(MtlMissingType::F32))
             }
         }
     }
@@ -156,7 +156,7 @@ impl<'a, I: Iterator<Item = &'a str>> Parser<I> {
                 }))
             },
             None => {
-                Err(MtlError::MissingValue(MtlMissingType::TyString))
+                Err(MtlError::MissingValue(MtlMissingType::String))
             }
         }
     }
@@ -177,7 +177,7 @@ impl Mtl {
         for line in file.lines() {
             let mut parser = match line {
                 Ok(ref line) => Parser(line.split_whitespace().filter(|s| !s.is_empty())),
-                Err(err) => return Err(MtlError::IoError(err)),
+                Err(err) => return Err(MtlError::Io(err)),
             };
             match parser.0.next() {
                 Some("newmtl") => {
