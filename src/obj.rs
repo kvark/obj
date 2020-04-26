@@ -12,6 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+//! Parsing and writing of a .obj file as defined in the
+//! [full spec](http://paulbourke.net/dataformats/obj/).
 
 #[cfg(feature = "genmesh")]
 pub use genmesh::{Polygon, Quad, Triangle};
@@ -22,8 +24,12 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Error};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::fmt;
 
 use mtl::{Material, Mtl, MtlError};
+
+const DEFAULT_OBJECT: &str = "default";
+const DEFAULT_GROUP: &str = "default";
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
@@ -32,6 +38,19 @@ pub type SimplePolygon = Vec<IndexTuple>;
 pub trait GenPolygon: Clone {
     fn new(line_number: usize, data: SimplePolygon) -> Self;
     fn try_new(line_number: usize, data: SimplePolygon) -> Result<Self,ObjError>;
+}
+
+impl std::fmt::Display for IndexTuple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0 + 1)?;
+        if let Some(idx) = self.1 {
+            write!(f, "/{}", idx + 1)?;
+        }
+        if let Some(idx) = self.2 {
+            write!(f, "/{}", idx + 1)?;
+        }
+        Ok(())
+    }
 }
 
 impl GenPolygon for SimplePolygon {
@@ -87,6 +106,35 @@ pub enum ObjError {
         line_number: usize,
         vert_count: usize,
     },
+}
+
+impl std::error::Error for ObjError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ObjError::Io(err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for ObjError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ObjError::Io(err) => write!(f, "I/O error loading a .obj file: {}", err),
+            ObjError::MalformedFaceGroup { line_number, group, } =>
+                write!(f, "One of the arguments to `f` is malformed (line: {}, group: {})", line_number, group),
+            ObjError::ArgumentListFailure { line_number, list } =>
+                write!(f, "An argument list either has unparsable arguments or is missing arguments. (line: {}, list: {})" ,
+                        line_number, list),
+            ObjError::UnexpectedCommand { line_number, command } =>
+                write!(f, "Command found that is not in the .obj spec. (line: {}, command: {})", line_number, command),
+            ObjError::MissingMTLName { line_number } =>
+                write!(f, "mtllib command issued, but no name was specified. (line: {})", line_number),
+            #[cfg(feature = "genmesh")]
+            ObjError::GenMeshTooManyVertsInPolygon { line_number, vert_count } =>
+                write!(f, "[`genmesh::Polygon`] only supports triangles and squares. (line: {}, vertex count: {}", line_number, vert_count),
+        }
+    }
 }
 
 impl From<io::Error> for ObjError {
