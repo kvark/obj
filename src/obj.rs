@@ -18,10 +18,10 @@
 #[cfg(feature = "genmesh")]
 pub use genmesh::{Polygon, Quad, Triangle};
 
-use std::borrow::Cow;
+use std::sync::Arc;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Error};
+use std::io::{self, Read, BufRead, BufReader, Error, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::fmt;
@@ -35,9 +35,14 @@ const DEFAULT_GROUP: &str = "default";
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
 pub type SimplePolygon = Vec<IndexTuple>;
 
+pub trait WriteToBuf {
+    type Error: std::fmt::Display;
+    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), Self::Error>;
+}
+
 pub trait GenPolygon: Clone {
     fn new(line_number: usize, data: SimplePolygon) -> Self;
-    fn try_new(line_number: usize, data: SimplePolygon) -> Result<Self,ObjError>;
+    fn try_new(line_number: usize, data: SimplePolygon) -> Result<Self, ObjError>;
 }
 
 impl std::fmt::Display for IndexTuple {
@@ -59,6 +64,31 @@ impl GenPolygon for SimplePolygon {
     }
     fn try_new(_line_number: usize, data: SimplePolygon) -> Result<Self,ObjError> {
         Ok(data)
+    }
+}
+
+impl WriteToBuf for SimplePolygon {
+    type Error = ObjError;
+    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
+        write!(out, "f")?;
+        for idx in self {
+            write!(out, " {}", idx)?;
+        }
+        writeln!(out)?;
+        Ok(())
+    }
+}
+
+
+#[cfg(feature = "genmesh")]
+impl WriteToBuf for Polygon<IndexTuple> {
+    type Error = ObjError;
+    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
+        match self {
+            Polygon::PolyTri(tri) => write!(out, "f {} {} {}", tri.x, tri.y, tri.z)?,
+            Polygon::PolyQuad(quad) => write!(out, "f {} {} {}", quad.x, quad.y, quad.z)?,
+        }
+        writeln!(out)
     }
 }
 
@@ -102,7 +132,7 @@ pub enum ObjError {
     },
     /// [`genmesh::Polygon`] only supports triangles and squares.
     #[cfg(feature = "genmesh")]
-    GenMeshTooManyVertsInPolygon{
+    GenMeshTooManyVertsInPolygon {
         line_number: usize,
         vert_count: usize,
     },
@@ -143,40 +173,89 @@ impl From<io::Error> for ObjError {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Object<'a, P>
-where
-    P: 'a + GenPolygon,
-{
-    pub name: String,
-    pub groups: Vec<Group<'a, P>>,
+
+/// Error loading individual material libraries.
+///
+/// The `Vec` items are tuples with first component being the the .mtl file, and the second its
+/// corresponding error.
+#[derive(Debug)]
+pub struct MtlLibsLoadError(Vec<(String, MtlError)>);
+
+impl std::error::Error for MtlLibsLoadError { }
+
+impl fmt::Display for MtlLibsLoadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "One of the material libraries failed to load: {:?}", self.0)
+    }
 }
 
-impl<'a, P> Object<'a, P>
-where
-    P: GenPolygon,
-{
+impl From<Vec<(String, MtlError)>> for MtlLibsLoadError {
+    fn from(e: Vec<(String, MtlError)>) -> Self {
+        MtlLibsLoadError(e)
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Object<P = SimplePolygon> {
+    pub name: String,
+    pub groups: Vec<Group<P>>,
+}
+
+impl<P> Object<P> {
     pub fn new(name: String) -> Self {
         Object { name: name, groups: Vec::new() }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Group<'a, P>
-where
-    P: 'a + GenPolygon,
-{
+
+impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Object<P> {
+    type Error = ObjError;
+    /// Serialize this `Object` into the given writer.
+    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
+        if self.name.as_str() != DEFAULT_OBJECT {
+            writeln!(out, "o {}", self.name)?;
+        }
+
+        for group in self.groups.iter() {
+            group.write_to_buf(out)?;
+        }
+
+        Ok(())
+    }
+}
+
+/// The data represented by the `usemtl` command.
+///
+/// The material name is replaced by the actual material data when the material libraries are
+/// laoded if a match is found.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ObjMaterial {
+    /// A reference to a material as a material name.
+    Ref(String),
+    /// A complete `Material` object loaded from a .mtl file in place of the material reference.
+    Mtl(Arc<Material>),
+}
+
+impl ObjMaterial {
+    fn name(&self) -> &str {
+        match self {
+            ObjMaterial::Ref(name) => name.as_str(),
+            ObjMaterial::Mtl(material) => material.name.as_str(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Group<P = SimplePolygon> {
     pub name: String,
     /// An index is used to tell groups apart that share the same name
     pub index: usize,
-    pub material: Option<Cow<'a, Material>>,
+    pub material: Option<ObjMaterial>,
     pub polys: Vec<P>,
 }
 
-impl<'a, P> Group<'a, P>
-where
-    P: 'a + GenPolygon,
-{
+impl<P> Group<P> {
     pub fn new(name: String) -> Self {
         Group {
             name: name,
@@ -187,15 +266,68 @@ where
     }
 }
 
-pub struct Obj<'a, P>
-where
-    P: 'a + GenPolygon,
-{
+impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Group<P> {
+    type Error = ObjError;
+    /// Serialize this `Group` into the given writer.
+    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
+        // When index is greater than 0, we know that this group is the same as the previous group,
+        // so don't bother declaring a new one.
+        if self.index == 0 {
+            writeln!(out, "g {}", self.name)?;
+        }
+
+        match &self.material {
+            Some(ObjMaterial::Ref(name)) => writeln!(out, "usemtl {}", name)?,
+            Some(ObjMaterial::Mtl(mtl)) => writeln!(out, "usemtl {}", mtl.name)?,
+            None => {}
+        }
+
+        for poly in &self.polys {
+            poly.write_to_buf(out)?;
+        }
+
+        Ok(())
+    }
+}
+
+/// The data model associated with each `Obj` file.
+#[derive(Debug, PartialEq)]
+pub struct ObjData<P = SimplePolygon> {
+    /// Vertex positions.
     pub position: Vec<[f32; 3]>,
+    /// 2D texture coordinates.
     pub texture: Vec<[f32; 2]>,
+    /// A set of normals.
     pub normal: Vec<[f32; 3]>,
-    pub objects: Vec<Object<'a, P>>,
-    pub material_libs: Vec<String>,
+    /// A collection of associated objects indicated by `o`, as well as the default object at the
+    /// top level.
+    pub objects: Vec<Object<P>>,
+    /// The set of all `mtllib` references to .mtl files.
+    pub material_libs: Vec<Mtl>,
+}
+
+impl<P> Default for ObjData<P> {
+    fn default() -> Self {
+        ObjData {
+            position: Vec::new(),
+            texture: Vec::new(),
+            normal: Vec::new(),
+            objects: Vec::new(),
+            material_libs: Vec::new(),
+        }
+    }
+}
+
+
+/// A struct used to store `Obj` data as well as its source directory used to load the referenced
+/// .mtl files.
+#[derive(Debug)]
+pub struct Obj<P = SimplePolygon> {
+    /// The data associated with this `Obj` file.
+    pub data: ObjData<P>,
+    /// The path of the parent directory from which this file was read.
+    ///
+    /// It is not always set since the file may have been read from a `String`.
     pub path: PathBuf,
 }
 
@@ -207,48 +339,33 @@ fn normalize(idx: isize, len: usize) -> usize {
     }
 }
 
-impl<'a, P> Obj<'a, P>
-where
-    P: GenPolygon,
-{
-    fn new() -> Self {
-        Obj {
-            position: Vec::new(),
-            texture: Vec::new(),
-            normal: Vec::new(),
-            objects: Vec::new(),
-            material_libs: Vec::new(),
-            path: PathBuf::new(),
-        }
+impl<P: WriteToBuf<Error = ObjError>> Obj<P> {
+    /// Save the current `Obj` at the given file path as well as any associated .mtl files.
+    ///
+    /// If a file already exists, it will be overwritten.
+    pub fn save(&self, path: &Path) -> Result<(), ObjError> {
+        self.data.save(path)
     }
+}
 
+impl<P: GenPolygon> Obj<P> {
+    /// Load an `Obj` file from the given path.
     pub fn load(path: &Path) -> Result<Obj<P>, ObjError> {
         let f = File::open(path)?;
-        let mut obj = Obj::load_buf(&mut BufReader::new(f))?;
-        // unwrap is safe as we've read this file before
-        obj.path = path.parent().unwrap().to_owned();
+        let data = ObjData::load_buf(&f)?;
 
-        Ok(obj)
-    }
+        // unwrap is safe since we've read this file before.
+        let path = path.parent().unwrap().to_owned();
 
-    fn load_single_mtl<R, F>(base_path: impl AsRef<Path>, mtllib: &str, resolve: &mut F) -> Result<Vec<Material>, MtlError>
-        where
-            R: io::BufRead,
-            F: FnMut(&Path, &str) -> io::Result<R>  {
-        let mut file = resolve(base_path.as_ref(), mtllib)?;
-        let mtl = Mtl::load(&mut file)?;
-        Ok(mtl.materials)
+        Ok(Obj { data, path })
     }
 
     /// Loads the .mtl files referenced in the .obj file.
     ///
     /// If it encounters an error for an .mtl, it appends its error to the
     /// returning Vec, and tries the rest.
-    ///
-    /// The Result Err value format is a Vec, which items are tuples with first
-    /// index being the the .mtl file and the second its corresponding error.
-    pub fn load_mtls(&mut self) -> Result<(), Vec<(String, MtlError)>> {
-        self.load_mtls_fn(|base_path, mtllib| File::open(&base_path.join(mtllib)).map(BufReader::new))
+    pub fn load_mtls(&mut self) -> Result<(), MtlLibsLoadError> {
+        self.load_mtls_fn(|obj_dir, mtllib| File::open(&obj_dir.join(mtllib)).map(BufReader::new))
     }
 
     /// Loads the .mtl files referenced in the .obj file with user provided loading logic.
@@ -259,45 +376,105 @@ where
     ///  - `&Path` - The parent directory of the .obj file
     ///  - `&str`  - The name of the mtllib as listed in the file.
     ///
+    /// This function allows loading .mtl files in directories different from the default .obj
+    /// directory.
+    ///
     /// It must return:
     ///  - Anything that implements [`io::BufRead`] that yields the contents of the intended .mtl file.
     ///
     /// [`load_mtls`]: #method.load_mtls
     /// [`io::BufRead`]: https://doc.rust-lang.org/std/io/trait.BufRead.html
-    pub fn load_mtls_fn<R, F>(&mut self, mut resolve: F) -> Result<(), Vec<(String, MtlError)>>
+    pub fn load_mtls_fn<R, F>(&mut self, mut resolve: F) -> Result<(), MtlLibsLoadError>
         where
             R: io::BufRead,
             F: FnMut(&Path, &str) -> io::Result<R> {
         let mut errs = Vec::new();
         let mut materials = HashMap::new();
 
-        for m in &self.material_libs {
-            match Self::load_single_mtl(&self.path, m, &mut resolve) {
-                Ok(mtl_materials) => {
-                    for m in mtl_materials {
-                        materials.insert(m.name.clone(), Cow::from(m));
+        for mtl_lib in &mut self.data.material_libs {
+            match mtl_lib.reload_with(&self.path, &mut resolve) {
+                Ok(mtl_lib) => {
+                    for m in &mtl_lib.materials {
+                        // We don't want to overwrite existing entries because of how the materials
+                        // are looked up. From the spec:
+                        // "If multiple filenames are specified, the first file
+                        //  listed is searched first for the material definition, the second
+                        //  file is searched next, and so on."
+                        materials.entry(m.name.clone()).or_insert(Arc::clone(m));
                     }
                 },
                 Err(err) => {
-                    errs.push((m.clone(), err));
+                    errs.push((mtl_lib.filename.clone(), err));
                 },
-            };
+            }
         }
 
-        for object in &mut self.objects {
+        // Assign loaded materials to the corresponding objects.
+        for object in &mut self.data.objects {
             for group in &mut object.groups {
                 if let Some(ref mut mat) = group.material {
-                    match materials.get(&mat.name) {
-                        Some(newmat) => *mat = newmat.clone(),
-                        None => {}
-                    };
+                    if let Some(newmat) = materials.get(mat.name()) {
+                        *mat = ObjMaterial::Mtl(Arc::clone(newmat));
+                    }
                 }
             }
         }
 
-        if errs.is_empty() { Ok(()) } else { Err(errs) }
+        if errs.is_empty() { Ok(()) } else { Err(errs.into()) }
+    }
+}
+
+impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
+    /// Save the current `ObjData` at the given file path as well as any associated .mtl files.
+    ///
+    /// If a file already exists, it will be overwritten.
+    pub fn save(&self, path: &Path) -> Result<(), ObjError> {
+        let mut f = File::create(path)?;
+        self.write_to_buf(&mut f)?;
+
+        // unwrap is safe because we created the file above.
+        let path = path.parent().unwrap();
+        self.save_mtls(path)
     }
 
+    /// Save all material libraries referenced in this `Obj` to the given base directory.
+    pub fn save_mtls(&self, base_dir: &Path) -> Result<(), ObjError> {
+        self.save_mtls_with_fn(base_dir, |base_dir, mtllib| File::create(base_dir.join(mtllib)))
+    }
+
+    /// Save all material libraries referenced in this `Obj` struct according to `resolve`.
+    pub fn save_mtls_with_fn<W: Write>(&self, base_dir: &Path, mut resolve: impl FnMut(&Path, &str) -> io::Result<W>) -> Result<(), ObjError> {
+        for mtl in &self.material_libs {
+            mtl.write_to_buf(&mut resolve(base_dir, &mtl.filename)?)?;
+        }
+        Ok(())
+    }
+
+    /// Serialize this `Obj` into the given writer.
+    pub fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
+        writeln!(out, "# Generated by the obj Rust library (https://crates.io/crates/obj).")?;
+
+        for pos in &self.position {
+            writeln!(out, "v {} {} {}", pos[0], pos[1], pos[2])?;
+        }
+        for uv in &self.texture {
+            writeln!(out, "vt {} {}", uv[0], uv[1])?;
+        }
+        for nml in &self.normal {
+            writeln!(out, "vn {} {} {}", nml[0], nml[1], nml[2])?;
+        }
+        for object in &self.objects {
+            object.write_to_buf(out)?;
+        }
+        for mtl_lib in &self.material_libs {
+            writeln!(out, "mtllib {}", mtl_lib.filename)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<P: GenPolygon> ObjData<P> {
     fn parse_two(line_number: usize, n0: Option<&str>, n1: Option<&str>) -> Result<[f32; 2], ObjError> {
         let (n0, n1) = match (n0, n1) {
             (Some(n0), Some(n1)) => (n0, n1),
@@ -338,9 +515,9 @@ where
         let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
 
         match (p, t, n) {
-            (Some(p), v, n) => {
+            (Some(p), t, n) => {
                 Ok(IndexTuple(normalize(p, self.position.len()),
-                              v.map(|v| normalize(v, self.texture.len())),
+                              t.map(|t| normalize(t, self.texture.len())),
                               n.map(|n| normalize(n, self.normal.len()))))
             }
             _ => Err(ObjError::MalformedFaceGroup {line_number, group: String::from(group)}),
@@ -351,20 +528,18 @@ where
     where
         I: Iterator<Item = &'b str>,
     {
-        let mut ret = Vec::with_capacity(3);
+        let mut ret = Vec::with_capacity(4);
         for g in groups {
-            let ituple = self.parse_group(line_number,g)?;
+            let ituple = self.parse_group(line_number, g)?;
             ret.push(ituple);
         }
         P::try_new(line_number, ret)
     }
 
-    pub fn load_buf<B>(input: &mut B) -> Result<Self, ObjError>
-    where
-        B: BufRead,
-    {
-        let mut dat = Obj::new();
-        let mut object = Object::new("default".to_string());
+    pub fn load_buf<R: Read>(input: R) -> Result<Self, ObjError> {
+        let input = BufReader::new(input);
+        let mut dat = ObjData::default();
+        let mut object = Object::new(DEFAULT_OBJECT.to_string());
         let mut group: Option<Group<P>> = None;
 
         for (idx, line) in input.lines().enumerate() {
@@ -393,7 +568,7 @@ where
                     let poly = dat.parse_face(idx, &mut words)?;
                     group = Some(match group {
                                      None => {
-                                         let mut g = Group::new("default".to_string());
+                                         let mut g = Group::new(DEFAULT_GROUP.to_string());
                                          g.polys.push(poly);
                                          g
                                      }
@@ -416,17 +591,12 @@ where
                         let name = line[1..].trim();
                         Object::new(name.to_string())
                     } else {
-                        Object::new("default".to_string())
+                        Object::new(DEFAULT_OBJECT.to_string())
                     };
                 }
                 Some("g") => {
-                    group = match group {
-                        Some(val) => {
-                            object.groups.push(val);
-                            None
-                        }
-                        None => None,
-                    };
+                    object.groups.extend(group.take());
+
                     if line.len() > 2 {
                         let name = line[2..].trim();
                         group = Some(Group::new(name.to_string()));
@@ -444,12 +614,12 @@ where
                         existing.push_str(next);
                         existing
                     });
-                    dat.material_libs.push(name);
+                    dat.material_libs.push(Mtl::new(name));
                 }
                 Some("usemtl") => {
                     let mut g = match group {
                         Some(g) => g,
-                        None => Group::new("default".to_string()),
+                        None => Group::new(DEFAULT_GROUP.to_string()),
                     };
                     // we found a new material that was applied to an existing
                     // object. It is treated as a new group.
@@ -459,7 +629,7 @@ where
                         g.polys.clear();
                     }
                     g.material = match words.next() {
-                        Some(w) => Some(Cow::from(Material::new(w.to_string()))),
+                        Some(w) => Some(ObjMaterial::Ref(w.to_string())),
                         None => None,
                     };
                     group = Some(g);
