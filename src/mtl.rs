@@ -12,15 +12,21 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+//! Parsing and writing of a .mtl file as defined in the
+//! [full spec](http://paulbourke.net/dataformats/mtl/).
+
+use std::sync::Arc;
 use std::borrow::Cow;
 use std::io::{BufRead, Error};
 use std::str::FromStr;
-use std::io;
+use std::fmt;
 
-#[derive(Debug, Clone)]
+/// The model of an a single Material as defined in the .mtl spec.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Material {
     pub name: String,
 
+    // Material color and illumination
     pub ka: Option<[f32; 3]>,
     pub kd: Option<[f32; 3]>,
     pub ks: Option<[f32; 3]>,
@@ -33,6 +39,7 @@ pub struct Material {
     pub d: Option<f32>,
     pub illum: Option<i32>,
 
+    // Texture and reflection maps
     pub map_ka: Option<String>,
     pub map_kd: Option<String>,
     pub map_ks: Option<String>,
@@ -81,6 +88,17 @@ pub enum MtlMissingType {
     String,
 }
 
+impl fmt::Display for MtlMissingType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MtlMissingType::I32 => write!(f, "i32"),
+            MtlMissingType::F32 => write!(f, "f32"),
+            MtlMissingType::String => write!(f, "String"),
+        }
+    }
+}
+
+
 /// Errors parsing or loading a .mtl file.
 #[derive(Debug)]
 pub enum MtlError {
@@ -93,6 +111,31 @@ pub enum MtlError {
     MissingMaterialName,
     /// Instruction requires a value, but that value was not provided.
     MissingValue(MtlMissingType),
+}
+
+impl std::error::Error for MtlError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            MtlError::Io(err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for MtlError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MtlError::Io(err) => write!(f, "I/O error loading a .mtl file: {}", err),
+            MtlError::InvalidInstruction(instruction) =>
+                write!(f, "Unsupported mtl instruction: {}", instruction),
+            MtlError::InvalidValue(val) =>
+                write!(f, "Attempted to parse the value '{}' but failed.", val),
+            MtlError::MissingMaterialName =>
+                write!(f, "newmtl issued, but no name provided."),
+            MtlError::MissingValue(ty) =>
+                write!(f, "Instruction is missing a value of type '{}'", ty),
+        }
+    }
 }
 
 impl From<io::Error> for MtlError {
