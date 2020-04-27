@@ -80,7 +80,7 @@ impl SimplePolygon {
     /// # Panics
     ///
     /// This function will panic if the polygon has more than 4 or less than 3 vertices.
-    pub fn into_genmesh_poly(self) -> Polygon<IndexTuple> {
+    pub fn into_genmesh(self) -> Polygon<IndexTuple> {
         std::convert::TryFrom::try_from(self).unwrap()
     }
 }

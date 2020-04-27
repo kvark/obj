@@ -51,7 +51,7 @@ fn test_load_square() {
                 .polys
                 .iter()
                 .cloned()
-                .map(|x| x.into_genmesh_poly())
+                .map(|x| x.into_genmesh())
                 .vertex(|IndexTuple(p, t, n)| {
                     (
                         obj.position[p],
