@@ -199,7 +199,7 @@ impl From<io::Error> for ObjError {
 /// The `Vec` items are tuples with first component being the the .mtl file, and the second its
 /// corresponding error.
 #[derive(Debug)]
-pub struct MtlLibsLoadError(Vec<(String, MtlError)>);
+pub struct MtlLibsLoadError(pub Vec<(String, MtlError)>);
 
 impl std::error::Error for MtlLibsLoadError {}
 
