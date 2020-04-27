@@ -31,8 +31,15 @@ use mtl::{Material, Mtl, MtlError};
 const DEFAULT_OBJECT: &str = "default";
 const DEFAULT_GROUP: &str = "default";
 
+/// A tuple of position, texture and normal indices assigned to each polygon vertex.
+///
+/// These appear as `/` separated indices in `.obj` files.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
+
+/// A a simple polygon with arbitrary many vertices.
+///
+/// Each vertex has an associated tuple of `(position, texture, normal)` indices.
 #[derive(Debug, Clone, Hash, PartialEq)]
 pub struct SimplePolygon(Vec<IndexTuple>);
 
@@ -67,21 +74,13 @@ impl WriteToBuf for SimplePolygon {
 }
 
 #[cfg(feature = "genmesh")]
-impl WriteToBuf for Polygon<IndexTuple> {
-    type Error = ObjError;
-    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
-        match self {
-            Polygon::PolyTri(tri) => write!(out, "f {} {} {}", tri.x, tri.y, tri.z)?,
-            Polygon::PolyQuad(quad) => write!(out, "f {} {} {}", quad.x, quad.y, quad.z)?,
-        }
-        writeln!(out)?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "genmesh")]
-impl SimplePolygon  {
-    fn into_genmesh_poly(self) -> Polygon<IndexTuple> {
+impl SimplePolygon {
+    /// Convert a `SimplePolygon` into a `genmesh` `Polygon` of `IndexTuple`s.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the polygon has more than 4 or less than 3 vertices.
+    pub fn into_genmesh_poly(self) -> Polygon<IndexTuple> {
         std::convert::TryFrom::try_from(self).unwrap()
     }
 }
@@ -93,11 +92,7 @@ impl std::convert::TryFrom<SimplePolygon> for Polygon<IndexTuple> {
         match gs.0.len() {
             3 => Ok(Polygon::PolyTri(Triangle::new(gs.0[0], gs.0[1], gs.0[2]))),
             4 => Ok(Polygon::PolyQuad(Quad::new(gs.0[0], gs.0[1], gs.0[2], gs.0[3]))),
-            n => {
-                return Err(ObjError::GenMeshTooManyVertsInPolygon {
-                    vert_count: n,
-                })
-            }
+            n => Err(ObjError::GenMeshWrongNumberOfVertsInPolygon { vert_count: n }),
         }
     }
 }
@@ -128,7 +123,7 @@ pub enum ObjError {
     },
     /// [`genmesh::Polygon`] only supports triangles and squares.
     #[cfg(feature = "genmesh")]
-    GenMeshTooManyVertsInPolygon {
+    GenMeshWrongNumberOfVertsInPolygon {
         vert_count: usize,
     },
 }
@@ -167,12 +162,10 @@ impl fmt::Display for ObjError {
                 line_number
             ),
             #[cfg(feature = "genmesh")]
-            ObjError::GenMeshTooManyVertsInPolygon {
-                vert_count,
-            } => write!(
+            ObjError::GenMeshWrongNumberOfVertsInPolygon { vert_count } => write!(
                 f,
                 "[`genmesh::Polygon`] only supports triangles and squares. (vertex count: {}",
-                 vert_count
+                vert_count
             ),
         }
     }
@@ -207,7 +200,9 @@ impl From<Vec<(String, MtlError)>> for MtlLibsLoadError {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Object {
+    /// Name of the object assigned by the `o ...` command in the `.obj` file.
     pub name: String,
+    /// Groups belonging to this object.
     pub groups: Vec<Group>,
 }
 
@@ -267,10 +262,18 @@ impl ObjMaterial {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Group {
+    /// Name of the group assigned by the `g ...` command in the `.obj` file.
     pub name: String,
-    /// An index is used to tell groups apart that share the same name
+    /// An index is used to tell groups apart that share the same name.
+    ///
+    /// This doesn't appear explicitly in the `.obj` file, but is used here to simplify groups by
+    /// limiting them to single materials.
     pub index: usize,
+    /// Material assigned to this group via the `usemtl ...` command in the `.obj` file.
+    ///
+    /// After material libs are loaded, this will point to the loaded `Material` struct.
     pub material: Option<ObjMaterial>,
+    /// A list of polygons appearing as `f ...` in the `.obj` file.
     pub polys: Vec<SimplePolygon>,
 }
 
