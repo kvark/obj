@@ -14,11 +14,11 @@
 
 extern crate obj;
 
-use obj::{Obj, SimplePolygon};
+use obj::Obj;
 use std::path::Path;
 
 #[test]
 fn load_test_file() {
-    let mut sponza = Obj::<SimplePolygon>::load(&Path::new("test_assets/sponza.obj")).unwrap();
+    let mut sponza = Obj::load(&Path::new("test_assets/sponza.obj")).unwrap();
     let _ = sponza.load_mtls().unwrap();
 }
