@@ -217,8 +217,13 @@ impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Object<P> {
             writeln!(out, "o {}", self.name)?;
         }
 
-        for group in self.groups.iter() {
+        let mut group_iter = self.groups.iter().peekable();
+        while let Some(group) = group_iter.next() {
             group.write_to_buf(out)?;
+
+            // Below we check that groups with `index > 0` have the same name as their predecessors
+            // which enables us to merge the two by omitting the additional `g ...` command.
+            assert!(group_iter.peek().map(|next_group| next_group.index == 0 || next_group.name == group.name).unwrap_or(true));
         }
 
         Ok(())
