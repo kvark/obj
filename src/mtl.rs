@@ -54,7 +54,7 @@ pub struct Material {
 impl Material {
     pub fn new(name: String) -> Self {
         Material {
-            name: name,
+            name,
             ka: None,
             kd: None,
             ks: None,
@@ -337,7 +337,7 @@ impl Mtl {
                     }
                 }
                 Some(other) => {
-                    if !other.starts_with("#") {
+                    if !other.starts_with('#') {
                         return Err(MtlError::InvalidInstruction(other.to_string()));
                     }
                 }
