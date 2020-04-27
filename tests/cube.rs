@@ -22,7 +22,6 @@ use genmesh::{MapToVertices, Polygon};
 use obj::IndexTuple;
 use obj::ObjData;
 use std::io::BufReader;
-use std::convert::TryFrom;
 
 static SQUARE: &'static str = "
 v 0 1 0
@@ -51,7 +50,8 @@ fn test_load_square() {
             let p: Vec<Polygon<([f32; 3], [f32; 2], [f32; 3])>> = g
                 .polys
                 .iter()
-                .map(|x| Polygon::try_from(x.clone()).unwrap())
+                .cloned()
+                .map(|x| x.into_genmesh_poly())
                 .vertex(|IndexTuple(p, t, n)| {
                     (
                         obj.position[p],
