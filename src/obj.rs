@@ -348,14 +348,18 @@ impl<P: WriteToBuf<Error = ObjError>> Obj<P> {
     /// Save the current `Obj` at the given file path as well as any associated .mtl files.
     ///
     /// If a file already exists, it will be overwritten.
-    pub fn save(&self, path: &Path) -> Result<(), ObjError> {
-        self.data.save(path)
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), ObjError> {
+        self.data.save(path.as_ref())
     }
 }
 
 impl<P: GenPolygon> Obj<P> {
     /// Load an `Obj` file from the given path.
-    pub fn load(path: &Path) -> Result<Obj<P>, ObjError> {
+    pub fn load(path: impl AsRef<Path>) -> Result<Obj<P>, ObjError> {
+        Obj::load_impl(path.as_ref())
+    }
+
+    fn load_impl(path: &Path) -> Result<Obj<P>, ObjError> {
         let f = File::open(path)?;
         let data = ObjData::load_buf(&f)?;
 
@@ -433,7 +437,11 @@ impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
     /// Save the current `ObjData` at the given file path as well as any associated .mtl files.
     ///
     /// If a file already exists, it will be overwritten.
-    pub fn save(&self, path: &Path) -> Result<(), ObjError> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), ObjError> {
+        self.save_impl(path.as_ref())
+    }
+
+    fn save_impl(&self, path: &Path) -> Result<(), ObjError> {
         let mut f = File::create(path)?;
         self.write_to_buf(&mut f)?;
 
@@ -443,8 +451,8 @@ impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
     }
 
     /// Save all material libraries referenced in this `Obj` to the given base directory.
-    pub fn save_mtls(&self, base_dir: &Path) -> Result<(), ObjError> {
-        self.save_mtls_with_fn(base_dir, |base_dir, mtllib| File::create(base_dir.join(mtllib)))
+    pub fn save_mtls(&self, base_dir: impl AsRef<Path>) -> Result<(), ObjError> {
+        self.save_mtls_with_fn(base_dir.as_ref(), |base_dir, mtllib| File::create(base_dir.join(mtllib)))
     }
 
     /// Save all material libraries referenced in this `Obj` struct according to `resolve`.
