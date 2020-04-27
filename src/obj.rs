@@ -18,13 +18,13 @@
 #[cfg(feature = "genmesh")]
 pub use genmesh::{Polygon, Quad, Triangle};
 
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs::File;
-use std::io::{self, Read, BufRead, BufReader, Error, Write};
+use std::io::{self, BufRead, BufReader, Error, Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::fmt;
+use std::sync::Arc;
 
 use mtl::{Material, Mtl, MtlError};
 
@@ -62,7 +62,7 @@ impl GenPolygon for SimplePolygon {
     fn new(_line_number: usize, data: Self) -> Self {
         data
     }
-    fn try_new(_line_number: usize, data: SimplePolygon) -> Result<Self,ObjError> {
+    fn try_new(_line_number: usize, data: SimplePolygon) -> Result<Self, ObjError> {
         Ok(data)
     }
 }
@@ -78,7 +78,6 @@ impl WriteToBuf for SimplePolygon {
         Ok(())
     }
 }
-
 
 #[cfg(feature = "genmesh")]
 impl WriteToBuf for Polygon<IndexTuple> {
@@ -97,11 +96,16 @@ impl GenPolygon for Polygon<IndexTuple> {
     fn new(line_number: usize, gs: SimplePolygon) -> Self {
         Polygon::<IndexTuple>::try_new(line_number, gs).unwrap()
     }
-    fn try_new(line_number: usize, gs: SimplePolygon) -> Result<Self,ObjError> {
+    fn try_new(line_number: usize, gs: SimplePolygon) -> Result<Self, ObjError> {
         match gs.len() {
             3 => Ok(Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2]))),
             4 => Ok(Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3]))),
-            n => return Err(ObjError::GenMeshTooManyVertsInPolygon {line_number, vert_count: n}),
+            n => {
+                return Err(ObjError::GenMeshTooManyVertsInPolygon {
+                    line_number,
+                    vert_count: n,
+                })
+            }
         }
     }
 }
@@ -142,7 +146,7 @@ impl std::error::Error for ObjError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             ObjError::Io(err) => Some(err),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -151,18 +155,35 @@ impl fmt::Display for ObjError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ObjError::Io(err) => write!(f, "I/O error loading a .obj file: {}", err),
-            ObjError::MalformedFaceGroup { line_number, group, } =>
-                write!(f, "One of the arguments to `f` is malformed (line: {}, group: {})", line_number, group),
-            ObjError::ArgumentListFailure { line_number, list } =>
-                write!(f, "An argument list either has unparsable arguments or is missing arguments. (line: {}, list: {})" ,
-                        line_number, list),
-            ObjError::UnexpectedCommand { line_number, command } =>
-                write!(f, "Command found that is not in the .obj spec. (line: {}, command: {})", line_number, command),
-            ObjError::MissingMTLName { line_number } =>
-                write!(f, "mtllib command issued, but no name was specified. (line: {})", line_number),
+            ObjError::MalformedFaceGroup { line_number, group } => write!(
+                f,
+                "One of the arguments to `f` is malformed (line: {}, group: {})",
+                line_number, group
+            ),
+            ObjError::ArgumentListFailure { line_number, list } => write!(
+                f,
+                "An argument list either has unparsable arguments or is missing arguments. (line: {}, list: {})",
+                line_number, list
+            ),
+            ObjError::UnexpectedCommand { line_number, command } => write!(
+                f,
+                "Command found that is not in the .obj spec. (line: {}, command: {})",
+                line_number, command
+            ),
+            ObjError::MissingMTLName { line_number } => write!(
+                f,
+                "mtllib command issued, but no name was specified. (line: {})",
+                line_number
+            ),
             #[cfg(feature = "genmesh")]
-            ObjError::GenMeshTooManyVertsInPolygon { line_number, vert_count } =>
-                write!(f, "[`genmesh::Polygon`] only supports triangles and squares. (line: {}, vertex count: {}", line_number, vert_count),
+            ObjError::GenMeshTooManyVertsInPolygon {
+                line_number,
+                vert_count,
+            } => write!(
+                f,
+                "[`genmesh::Polygon`] only supports triangles and squares. (line: {}, vertex count: {}",
+                line_number, vert_count
+            ),
         }
     }
 }
@@ -173,7 +194,6 @@ impl From<io::Error> for ObjError {
     }
 }
 
-
 /// Error loading individual material libraries.
 ///
 /// The `Vec` items are tuples with first component being the the .mtl file, and the second its
@@ -181,7 +201,7 @@ impl From<io::Error> for ObjError {
 #[derive(Debug)]
 pub struct MtlLibsLoadError(Vec<(String, MtlError)>);
 
-impl std::error::Error for MtlLibsLoadError { }
+impl std::error::Error for MtlLibsLoadError {}
 
 impl fmt::Display for MtlLibsLoadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -195,7 +215,6 @@ impl From<Vec<(String, MtlError)>> for MtlLibsLoadError {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Object<P = SimplePolygon> {
     pub name: String,
@@ -204,10 +223,12 @@ pub struct Object<P = SimplePolygon> {
 
 impl<P> Object<P> {
     pub fn new(name: String) -> Self {
-        Object { name: name, groups: Vec::new() }
+        Object {
+            name: name,
+            groups: Vec::new(),
+        }
     }
 }
-
 
 impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Object<P> {
     type Error = ObjError;
@@ -223,7 +244,10 @@ impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Object<P> {
 
             // Below we check that groups with `index > 0` have the same name as their predecessors
             // which enables us to merge the two by omitting the additional `g ...` command.
-            assert!(group_iter.peek().map(|next_group| next_group.index == 0 || next_group.name == group.name).unwrap_or(true));
+            assert!(group_iter
+                .peek()
+                .map(|next_group| next_group.index == 0 || next_group.name == group.name)
+                .unwrap_or(true));
         }
 
         Ok(())
@@ -323,7 +347,6 @@ impl<P> Default for ObjData<P> {
     }
 }
 
-
 /// A struct used to store `Obj` data as well as its source directory used to load the referenced
 /// .mtl files.
 #[derive(Debug)]
@@ -394,9 +417,10 @@ impl<P: GenPolygon> Obj<P> {
     /// [`load_mtls`]: #method.load_mtls
     /// [`io::BufRead`]: https://doc.rust-lang.org/std/io/trait.BufRead.html
     pub fn load_mtls_fn<R, F>(&mut self, mut resolve: F) -> Result<(), MtlLibsLoadError>
-        where
-            R: io::BufRead,
-            F: FnMut(&Path, &str) -> io::Result<R> {
+    where
+        R: io::BufRead,
+        F: FnMut(&Path, &str) -> io::Result<R>,
+    {
         let mut errs = Vec::new();
         let mut materials = HashMap::new();
 
@@ -411,10 +435,10 @@ impl<P: GenPolygon> Obj<P> {
                         //  file is searched next, and so on."
                         materials.entry(m.name.clone()).or_insert(Arc::clone(m));
                     }
-                },
+                }
                 Err(err) => {
                     errs.push((mtl_lib.filename.clone(), err));
-                },
+                }
             }
         }
 
@@ -429,7 +453,11 @@ impl<P: GenPolygon> Obj<P> {
             }
         }
 
-        if errs.is_empty() { Ok(()) } else { Err(errs.into()) }
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(errs.into())
+        }
     }
 }
 
@@ -452,11 +480,17 @@ impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
 
     /// Save all material libraries referenced in this `Obj` to the given base directory.
     pub fn save_mtls(&self, base_dir: impl AsRef<Path>) -> Result<(), ObjError> {
-        self.save_mtls_with_fn(base_dir.as_ref(), |base_dir, mtllib| File::create(base_dir.join(mtllib)))
+        self.save_mtls_with_fn(base_dir.as_ref(), |base_dir, mtllib| {
+            File::create(base_dir.join(mtllib))
+        })
     }
 
     /// Save all material libraries referenced in this `Obj` struct according to `resolve`.
-    pub fn save_mtls_with_fn<W: Write>(&self, base_dir: &Path, mut resolve: impl FnMut(&Path, &str) -> io::Result<W>) -> Result<(), ObjError> {
+    pub fn save_mtls_with_fn<W: Write>(
+        &self,
+        base_dir: &Path,
+        mut resolve: impl FnMut(&Path, &str) -> io::Result<W>,
+    ) -> Result<(), ObjError> {
         for mtl in &self.material_libs {
             mtl.write_to_buf(&mut resolve(base_dir, &mtl.filename)?)?;
         }
@@ -465,7 +499,10 @@ impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
 
     /// Serialize this `Obj` into the given writer.
     pub fn write_to_buf(&self, out: &mut impl Write) -> Result<(), ObjError> {
-        writeln!(out, "# Generated by the obj Rust library (https://crates.io/crates/obj).")?;
+        writeln!(
+            out,
+            "# Generated by the obj Rust library (https://crates.io/crates/obj)."
+        )?;
 
         for pos in &self.position {
             writeln!(out, "v {} {} {}", pos[0], pos[1], pos[2])?;
@@ -492,29 +529,46 @@ impl<P: GenPolygon> ObjData<P> {
         let (n0, n1) = match (n0, n1) {
             (Some(n0), Some(n1)) => (n0, n1),
             _ => {
-                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?}", n0, n1)});
+                return Err(ObjError::ArgumentListFailure {
+                    line_number,
+                    list: format!("{:?} {:?}", n0, n1),
+                });
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1)) {
             (Ok(n0), Ok(n1)) => [n0, n1],
             _ => {
-                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?}", n0, n1)});
+                return Err(ObjError::ArgumentListFailure {
+                    line_number,
+                    list: format!("{:?} {:?}", n0, n1),
+                });
             }
         };
         Ok(normal)
     }
 
-    fn parse_three(line_number: usize, n0: Option<&str>, n1: Option<&str>, n2: Option<&str>) -> Result<[f32; 3], ObjError> {
+    fn parse_three(
+        line_number: usize,
+        n0: Option<&str>,
+        n1: Option<&str>,
+        n2: Option<&str>,
+    ) -> Result<[f32; 3], ObjError> {
         let (n0, n1, n2) = match (n0, n1, n2) {
             (Some(n0), Some(n1), Some(n2)) => (n0, n1, n2),
             _ => {
-                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?} {:?}", n0, n1, n2)});
+                return Err(ObjError::ArgumentListFailure {
+                    line_number,
+                    list: format!("{:?} {:?} {:?}", n0, n1, n2),
+                });
             }
         };
         let normal = match (FromStr::from_str(n0), FromStr::from_str(n1), FromStr::from_str(n2)) {
             (Ok(n0), Ok(n1), Ok(n2)) => [n0, n1, n2],
             _ => {
-                return Err(ObjError::ArgumentListFailure { line_number, list: format!("{:?} {:?} {:?}", n0, n1, n2)});
+                return Err(ObjError::ArgumentListFailure {
+                    line_number,
+                    list: format!("{:?} {:?} {:?}", n0, n1, n2),
+                });
             }
         };
         Ok(normal)
@@ -523,17 +577,21 @@ impl<P: GenPolygon> ObjData<P> {
     fn parse_group(&self, line_number: usize, group: &str) -> Result<IndexTuple, ObjError> {
         let mut group_split = group.split('/');
         let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
-        let t: Option<isize> =
-            group_split.next().and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None });
+        let t: Option<isize> = group_split
+            .next()
+            .and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None });
         let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
 
         match (p, t, n) {
-            (Some(p), t, n) => {
-                Ok(IndexTuple(normalize(p, self.position.len()),
-                              t.map(|t| normalize(t, self.texture.len())),
-                              n.map(|n| normalize(n, self.normal.len()))))
-            }
-            _ => Err(ObjError::MalformedFaceGroup {line_number, group: String::from(group)}),
+            (Some(p), t, n) => Ok(IndexTuple(
+                normalize(p, self.position.len()),
+                t.map(|t| normalize(t, self.texture.len())),
+                n.map(|n| normalize(n, self.normal.len())),
+            )),
+            _ => Err(ObjError::MalformedFaceGroup {
+                line_number,
+                group: String::from(group),
+            }),
         }
     }
 
@@ -559,7 +617,10 @@ impl<P: GenPolygon> ObjData<P> {
             let (line, mut words) = match line {
                 Ok(ref line) => (line.clone(), line.split_whitespace().filter(|s| !s.is_empty())),
                 Err(err) => {
-                    return Err(ObjError::Io(io::Error::new(io::ErrorKind::InvalidData, format!("failed to readline {}", err))));
+                    return Err(ObjError::Io(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("failed to readline {}", err),
+                    )));
                 }
             };
             let first = words.next();
@@ -580,16 +641,16 @@ impl<P: GenPolygon> ObjData<P> {
                 Some("f") => {
                     let poly = dat.parse_face(idx, &mut words)?;
                     group = Some(match group {
-                                     None => {
-                                         let mut g = Group::new(DEFAULT_GROUP.to_string());
-                                         g.polys.push(poly);
-                                         g
-                                     }
-                                     Some(mut g) => {
-                                         g.polys.push(poly);
-                                         g
-                                     }
-                                 });
+                        None => {
+                            let mut g = Group::new(DEFAULT_GROUP.to_string());
+                            g.polys.push(poly);
+                            g
+                        }
+                        Some(mut g) => {
+                            g.polys.push(poly);
+                            g
+                        }
+                    });
                 }
                 Some("o") => {
                     group = match group {
@@ -621,7 +682,10 @@ impl<P: GenPolygon> ObjData<P> {
                     // However, everyone does it anyway and if we want to ingest blender-outputted files, we need to support it.
                     // This works by walking word by word and combining them with a space in between. This may not be a totally
                     // accurate way to do it, but until the parser can be re-worked, this is good-enough, better-than-before solution.
-                    let first_word = words.next().ok_or_else(|| ObjError::MissingMTLName {line_number: idx})?.to_string();
+                    let first_word = words
+                        .next()
+                        .ok_or_else(|| ObjError::MissingMTLName { line_number: idx })?
+                        .to_string();
                     let name = words.fold(first_word, |mut existing, next| {
                         existing.push(' ');
                         existing.push_str(next);
@@ -651,7 +715,10 @@ impl<P: GenPolygon> ObjData<P> {
                 Some("l") => (),
                 Some(other) => {
                     if !other.starts_with("#") {
-                        return Err(ObjError::UnexpectedCommand {line_number: idx, command: other.to_string()})
+                        return Err(ObjError::UnexpectedCommand {
+                            line_number: idx,
+                            command: other.to_string(),
+                        });
                     }
                 }
                 None => (),
