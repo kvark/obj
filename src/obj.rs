@@ -33,16 +33,12 @@ const DEFAULT_GROUP: &str = "default";
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
-pub type SimplePolygon = Vec<IndexTuple>;
+#[derive(Debug, Clone, Hash, PartialEq)]
+pub struct SimplePolygon(Vec<IndexTuple>);
 
 pub trait WriteToBuf {
     type Error: std::fmt::Display;
     fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), Self::Error>;
-}
-
-pub trait GenPolygon: Clone {
-    fn new(line_number: usize, data: SimplePolygon) -> Self;
-    fn try_new(line_number: usize, data: SimplePolygon) -> Result<Self, ObjError>;
 }
 
 impl std::fmt::Display for IndexTuple {
@@ -58,20 +54,11 @@ impl std::fmt::Display for IndexTuple {
     }
 }
 
-impl GenPolygon for SimplePolygon {
-    fn new(_line_number: usize, data: Self) -> Self {
-        data
-    }
-    fn try_new(_line_number: usize, data: SimplePolygon) -> Result<Self, ObjError> {
-        Ok(data)
-    }
-}
-
 impl WriteToBuf for SimplePolygon {
     type Error = ObjError;
     fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
         write!(out, "f")?;
-        for idx in self {
+        for idx in &self.0 {
             write!(out, " {}", idx)?;
         }
         writeln!(out)?;
@@ -87,22 +74,27 @@ impl WriteToBuf for Polygon<IndexTuple> {
             Polygon::PolyTri(tri) => write!(out, "f {} {} {}", tri.x, tri.y, tri.z)?,
             Polygon::PolyQuad(quad) => write!(out, "f {} {} {}", quad.x, quad.y, quad.z)?,
         }
-        writeln!(out)
+        writeln!(out)?;
+        Ok(())
     }
 }
 
 #[cfg(feature = "genmesh")]
-impl GenPolygon for Polygon<IndexTuple> {
-    fn new(line_number: usize, gs: SimplePolygon) -> Self {
-        Polygon::<IndexTuple>::try_new(line_number, gs).unwrap()
+impl SimplePolygon  {
+    fn into_genmesh_poly(self) -> Polygon<IndexTuple> {
+        std::convert::TryFrom::try_from(self).unwrap()
     }
-    fn try_new(line_number: usize, gs: SimplePolygon) -> Result<Self, ObjError> {
-        match gs.len() {
-            3 => Ok(Polygon::PolyTri(Triangle::new(gs[0], gs[1], gs[2]))),
-            4 => Ok(Polygon::PolyQuad(Quad::new(gs[0], gs[1], gs[2], gs[3]))),
+}
+
+#[cfg(feature = "genmesh")]
+impl std::convert::TryFrom<SimplePolygon> for Polygon<IndexTuple> {
+    type Error = ObjError;
+    fn try_from(gs: SimplePolygon) -> Result<Polygon<IndexTuple>, ObjError> {
+        match gs.0.len() {
+            3 => Ok(Polygon::PolyTri(Triangle::new(gs.0[0], gs.0[1], gs.0[2]))),
+            4 => Ok(Polygon::PolyQuad(Quad::new(gs.0[0], gs.0[1], gs.0[2], gs.0[3]))),
             n => {
                 return Err(ObjError::GenMeshTooManyVertsInPolygon {
-                    line_number,
                     vert_count: n,
                 })
             }
@@ -137,7 +129,6 @@ pub enum ObjError {
     /// [`genmesh::Polygon`] only supports triangles and squares.
     #[cfg(feature = "genmesh")]
     GenMeshTooManyVertsInPolygon {
-        line_number: usize,
         vert_count: usize,
     },
 }
@@ -177,12 +168,11 @@ impl fmt::Display for ObjError {
             ),
             #[cfg(feature = "genmesh")]
             ObjError::GenMeshTooManyVertsInPolygon {
-                line_number,
                 vert_count,
             } => write!(
                 f,
-                "[`genmesh::Polygon`] only supports triangles and squares. (line: {}, vertex count: {}",
-                line_number, vert_count
+                "[`genmesh::Polygon`] only supports triangles and squares. (vertex count: {}",
+                 vert_count
             ),
         }
     }
@@ -216,12 +206,12 @@ impl From<Vec<(String, MtlError)>> for MtlLibsLoadError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Object<P = SimplePolygon> {
+pub struct Object {
     pub name: String,
-    pub groups: Vec<Group<P>>,
+    pub groups: Vec<Group>,
 }
 
-impl<P> Object<P> {
+impl Object {
     pub fn new(name: String) -> Self {
         Object {
             name,
@@ -230,7 +220,7 @@ impl<P> Object<P> {
     }
 }
 
-impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Object<P> {
+impl WriteToBuf for Object {
     type Error = ObjError;
     /// Serialize this `Object` into the given writer.
     fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
@@ -276,15 +266,15 @@ impl ObjMaterial {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Group<P = SimplePolygon> {
+pub struct Group {
     pub name: String,
     /// An index is used to tell groups apart that share the same name
     pub index: usize,
     pub material: Option<ObjMaterial>,
-    pub polys: Vec<P>,
+    pub polys: Vec<SimplePolygon>,
 }
 
-impl<P> Group<P> {
+impl Group {
     pub fn new(name: String) -> Self {
         Group {
             name,
@@ -295,7 +285,7 @@ impl<P> Group<P> {
     }
 }
 
-impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Group<P> {
+impl WriteToBuf for Group {
     type Error = ObjError;
     /// Serialize this `Group` into the given writer.
     fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
@@ -321,7 +311,7 @@ impl<P: WriteToBuf<Error = ObjError>> WriteToBuf for Group<P> {
 
 /// The data model associated with each `Obj` file.
 #[derive(Debug, PartialEq)]
-pub struct ObjData<P = SimplePolygon> {
+pub struct ObjData {
     /// Vertex positions.
     pub position: Vec<[f32; 3]>,
     /// 2D texture coordinates.
@@ -330,12 +320,12 @@ pub struct ObjData<P = SimplePolygon> {
     pub normal: Vec<[f32; 3]>,
     /// A collection of associated objects indicated by `o`, as well as the default object at the
     /// top level.
-    pub objects: Vec<Object<P>>,
+    pub objects: Vec<Object>,
     /// The set of all `mtllib` references to .mtl files.
     pub material_libs: Vec<Mtl>,
 }
 
-impl<P> Default for ObjData<P> {
+impl Default for ObjData {
     fn default() -> Self {
         ObjData {
             position: Vec::new(),
@@ -350,9 +340,9 @@ impl<P> Default for ObjData<P> {
 /// A struct used to store `Obj` data as well as its source directory used to load the referenced
 /// .mtl files.
 #[derive(Debug)]
-pub struct Obj<P = SimplePolygon> {
+pub struct Obj {
     /// The data associated with this `Obj` file.
-    pub data: ObjData<P>,
+    pub data: ObjData,
     /// The path of the parent directory from which this file was read.
     ///
     /// It is not always set since the file may have been read from a `String`.
@@ -367,7 +357,7 @@ fn normalize(idx: isize, len: usize) -> usize {
     }
 }
 
-impl<P: WriteToBuf<Error = ObjError>> Obj<P> {
+impl Obj {
     /// Save the current `Obj` at the given file path as well as any associated .mtl files.
     ///
     /// If a file already exists, it will be overwritten.
@@ -376,13 +366,13 @@ impl<P: WriteToBuf<Error = ObjError>> Obj<P> {
     }
 }
 
-impl<P: GenPolygon> Obj<P> {
+impl Obj {
     /// Load an `Obj` file from the given path.
-    pub fn load(path: impl AsRef<Path>) -> Result<Obj<P>, ObjError> {
+    pub fn load(path: impl AsRef<Path>) -> Result<Obj, ObjError> {
         Obj::load_impl(path.as_ref())
     }
 
-    fn load_impl(path: &Path) -> Result<Obj<P>, ObjError> {
+    fn load_impl(path: &Path) -> Result<Obj, ObjError> {
         let f = File::open(path)?;
         let data = ObjData::load_buf(&f)?;
 
@@ -461,7 +451,7 @@ impl<P: GenPolygon> Obj<P> {
     }
 }
 
-impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
+impl ObjData {
     /// Save the current `ObjData` at the given file path as well as any associated .mtl files.
     ///
     /// If a file already exists, it will be overwritten.
@@ -524,7 +514,7 @@ impl<P: WriteToBuf<Error = ObjError>> ObjData<P> {
     }
 }
 
-impl<P: GenPolygon> ObjData<P> {
+impl ObjData {
     fn parse_two(line_number: usize, n0: Option<&str>, n1: Option<&str>) -> Result<[f32; 2], ObjError> {
         let (n0, n1) = match (n0, n1) {
             (Some(n0), Some(n1)) => (n0, n1),
@@ -595,7 +585,7 @@ impl<P: GenPolygon> ObjData<P> {
         }
     }
 
-    fn parse_face<'b, I>(&self, line_number: usize, groups: &mut I) -> Result<P, ObjError>
+    fn parse_face<'b, I>(&self, line_number: usize, groups: &mut I) -> Result<SimplePolygon, ObjError>
     where
         I: Iterator<Item = &'b str>,
     {
@@ -604,14 +594,14 @@ impl<P: GenPolygon> ObjData<P> {
             let ituple = self.parse_group(line_number, g)?;
             ret.push(ituple);
         }
-        P::try_new(line_number, ret)
+        Ok(SimplePolygon(ret))
     }
 
     pub fn load_buf<R: Read>(input: R) -> Result<Self, ObjError> {
         let input = BufReader::new(input);
         let mut dat = ObjData::default();
         let mut object = Object::new(DEFAULT_OBJECT.to_string());
-        let mut group: Option<Group<P>> = None;
+        let mut group: Option<Group> = None;
 
         for (idx, line) in input.lines().enumerate() {
             let (line, mut words) = match line {
