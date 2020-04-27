@@ -241,7 +241,7 @@ impl Mtl {
     /// Load the mtl library from the given input buffer.
     ///
     /// This function overwrites the contents of this library if it has already been loaded.
-    pub fn reload<R: Read>(&mut self, input: R) -> Result<&mut Self, MtlError> {
+    pub fn reload(&mut self, input: impl Read) -> Result<&mut Self, MtlError> {
         self.materials.clear();
         let input = BufReader::new(input);
         let mut material = None;
@@ -252,7 +252,7 @@ impl Mtl {
             };
             match parser.0.next() {
                 Some("newmtl") => {
-                    self.materials.extend(material.take().map(|m| Arc::new(m)));
+                    self.materials.extend(material.take().map(Arc::new));
                     material = Some(Material::new(parser.0.next().ok_or_else(|| MtlError::MissingMaterialName)?.to_string()));
                 }
                 Some("Ka") => {
@@ -356,7 +356,7 @@ impl Mtl {
         Ok(self)
     }
 
-    pub fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), io::Error> {
+    pub fn write_to_buf(&self, out: &mut impl Write) -> Result<(), io::Error> {
         for mtl in &self.materials {
             writeln!(out, "newmtl {}", mtl.name)?;
             if let Some([ka0, ka1, ka2]) = mtl.ka {
