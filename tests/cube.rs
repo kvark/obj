@@ -18,9 +18,9 @@ extern crate obj;
 
 #[cfg(feature = "genmesh")]
 use genmesh::{MapToVertices, Polygon};
-use obj::{ObjData, SimplePolygon};
 #[cfg(feature = "genmesh")]
 use obj::IndexTuple;
+use obj::{ObjData, SimplePolygon};
 use std::io::BufReader;
 
 static SQUARE: &'static str = "
@@ -47,17 +47,21 @@ fn test_load_square() {
 
     for o in &obj.objects {
         for g in &o.groups {
-            let p: Vec<Polygon<([f32; 3], [f32; 2], [f32; 3])>> = g.polys
+            let p: Vec<Polygon<([f32; 3], [f32; 2], [f32; 3])>> = g
+                .polys
                 .iter()
                 .map(|x| *x)
                 .vertex(|IndexTuple(p, t, n)| {
-                    (obj.position[p], t.map_or([0., 0.], |t| obj.texture[t]), n.map_or([1., 0., 0.], |n| obj.normal[n]))
+                    (
+                        obj.position[p],
+                        t.map_or([0., 0.], |t| obj.texture[t]),
+                        n.map_or([1., 0., 0.], |n| obj.normal[n]),
+                    )
                 })
                 .collect();
             drop(p)
         }
     }
-
 }
 
 #[test]
@@ -118,7 +122,6 @@ static CUBE_NAMES: &'static [&'static str] = &[
     "left cube",
     "bottom cube",
 ];
-
 
 #[test]
 #[cfg(feature = "genmesh")]

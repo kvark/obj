@@ -35,7 +35,10 @@ fn round_trip_sponza_with_mtl() {
     // Write obj to string, and then load it from that string to create a round trip Obj instance.
     let mut obj = Vec::new();
     sponza.data.write_to_buf(&mut obj).unwrap();
-    let mut sponza_round_trip: Obj = Obj { data: ObjData::load_buf(obj.as_slice()).unwrap(), path: sponza.path };
+    let mut sponza_round_trip: Obj = Obj {
+        data: ObjData::load_buf(obj.as_slice()).unwrap(),
+        path: sponza.path,
+    };
 
     // Write each mtl lib to a string and load it back using load_mtls_fn into sponza_round_trip.
     let mut round_trip_mtl_libs = std::collections::HashMap::new();
@@ -44,9 +47,9 @@ fn round_trip_sponza_with_mtl() {
         mtl.write_to_buf(&mut out).unwrap();
         round_trip_mtl_libs.insert(mtl.filename.as_str(), out);
     }
-    sponza_round_trip.load_mtls_fn(|_, mtllib| {
-        Ok(round_trip_mtl_libs.get(mtllib).unwrap().as_slice())
-    }).unwrap();
+    sponza_round_trip
+        .load_mtls_fn(|_, mtllib| Ok(round_trip_mtl_libs.get(mtllib).unwrap().as_slice()))
+        .unwrap();
 
     assert_eq!(sponza_round_trip.data, sponza.data);
 }
