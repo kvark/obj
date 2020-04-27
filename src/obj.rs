@@ -224,7 +224,7 @@ pub struct Object<P = SimplePolygon> {
 impl<P> Object<P> {
     pub fn new(name: String) -> Self {
         Object {
-            name: name,
+            name,
             groups: Vec::new(),
         }
     }
@@ -287,7 +287,7 @@ pub struct Group<P = SimplePolygon> {
 impl<P> Group<P> {
     pub fn new(name: String) -> Self {
         Group {
-            name: name,
+            name,
             index: 0,
             material: None,
             polys: Vec::new(),
@@ -433,7 +433,7 @@ impl<P: GenPolygon> Obj<P> {
                         // "If multiple filenames are specified, the first file
                         //  listed is searched first for the material definition, the second
                         //  file is searched next, and so on."
-                        materials.entry(m.name.clone()).or_insert(Arc::clone(m));
+                        materials.entry(m.name.clone()).or_insert_with(|| Arc::clone(m));
                     }
                 }
                 Err(err) => {
@@ -694,10 +694,7 @@ impl<P: GenPolygon> ObjData<P> {
                     dat.material_libs.push(Mtl::new(name));
                 }
                 Some("usemtl") => {
-                    let mut g = match group {
-                        Some(g) => g,
-                        None => Group::new(DEFAULT_GROUP.to_string()),
-                    };
+                    let mut g = group.unwrap_or_else(|| Group::new(DEFAULT_GROUP.to_string()));
                     // we found a new material that was applied to an existing
                     // object. It is treated as a new group.
                     if g.material.is_some() {
@@ -705,16 +702,13 @@ impl<P: GenPolygon> ObjData<P> {
                         g.index += 1;
                         g.polys.clear();
                     }
-                    g.material = match words.next() {
-                        Some(w) => Some(ObjMaterial::Ref(w.to_string())),
-                        None => None,
-                    };
+                    g.material = words.next().map(|w| ObjMaterial::Ref(w.to_string()));
                     group = Some(g);
                 }
                 Some("s") => (),
                 Some("l") => (),
                 Some(other) => {
-                    if !other.starts_with("#") {
+                    if !other.starts_with('#') {
                         return Err(ObjError::UnexpectedCommand {
                             line_number: idx,
                             command: other.to_string(),
@@ -724,10 +718,11 @@ impl<P: GenPolygon> ObjData<P> {
                 None => (),
             }
         }
-        match group {
-            Some(g) => object.groups.push(g),
-            None => (),
-        };
+
+        if let Some(g) = group {
+            object.groups.push(g);
+        }
+
         dat.objects.push(object);
         Ok(dat)
     }
