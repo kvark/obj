@@ -15,11 +15,10 @@
 extern crate obj;
 
 use obj::{Obj, ObjData};
-use std::path::Path;
 
 #[test]
 fn round_trip_sponza_no_mtls() {
-    let sponza: Obj = Obj::load(&Path::new("test_assets/sponza.obj")).unwrap();
+    let sponza: Obj = Obj::load("test_assets/sponza.obj").unwrap();
 
     let mut obj = Vec::new();
     sponza.data.write_to_buf(&mut obj).unwrap();
@@ -30,7 +29,7 @@ fn round_trip_sponza_no_mtls() {
 
 #[test]
 fn round_trip_sponza_with_mtl() {
-    let mut sponza: Obj = Obj::load(&Path::new("test_assets/sponza.obj")).unwrap();
+    let mut sponza: Obj = Obj::load("test_assets/sponza.obj").unwrap();
     sponza.load_mtls().unwrap();
 
     // Write obj to string, and then load it from that string to create a round trip Obj instance.
