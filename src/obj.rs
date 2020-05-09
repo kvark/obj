@@ -41,7 +41,7 @@ pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
 ///
 /// Each vertex has an associated tuple of `(position, texture, normal)` indices.
 #[derive(Debug, Clone, Hash, PartialEq)]
-pub struct SimplePolygon(Vec<IndexTuple>);
+pub struct SimplePolygon(pub Vec<IndexTuple>);
 
 pub trait WriteToBuf {
     type Error: std::fmt::Display;
