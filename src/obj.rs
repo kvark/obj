@@ -313,7 +313,7 @@ impl WriteToBuf for Group {
 }
 
 /// The data model associated with each `Obj` file.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ObjData {
     /// Vertex positions.
     pub position: Vec<[f32; 3]>,
