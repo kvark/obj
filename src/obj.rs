@@ -342,7 +342,7 @@ impl Default for ObjData {
 
 /// A struct used to store `Obj` data as well as its source directory used to load the referenced
 /// .mtl files.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Obj {
     /// The data associated with this `Obj` file.
     pub data: ObjData,
