@@ -15,12 +15,14 @@
 //! Parsing and writing of a .mtl file as defined in the
 //! [full spec](http://paulbourke.net/dataformats/mtl/).
 
-use std::borrow::Cow;
-use std::fmt;
-use std::io::{self, BufRead, BufReader, Error, Read, Write};
-use std::path::Path;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{
+    borrow::Cow,
+    fmt,
+    io::{self, BufRead, BufReader, Error, Read, Write},
+    path::Path,
+    str::FromStr,
+    sync::Arc,
+};
 
 /// The model of an a single Material as defined in the .mtl spec.
 #[derive(Debug, Clone, PartialEq)]

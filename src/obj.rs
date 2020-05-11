@@ -18,15 +18,17 @@
 #[cfg(feature = "genmesh")]
 pub use genmesh::{Polygon, Quad, Triangle};
 
-use std::collections::HashMap;
-use std::fmt;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Error, Read, Write};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    fmt,
+    fs::File,
+    io::{self, BufRead, BufReader, Error, Read, Write},
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Arc,
+};
 
-use mtl::{Material, Mtl, MtlError};
+use crate::mtl::{Material, Mtl, MtlError};
 
 const DEFAULT_OBJECT: &str = "default";
 const DEFAULT_GROUP: &str = "default";

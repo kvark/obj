@@ -13,10 +13,6 @@
 //   limitations under the License.
 
 #[cfg(feature = "genmesh")]
-extern crate genmesh;
-extern crate obj;
-
-#[cfg(feature = "genmesh")]
 use genmesh::{MapToVertices, Polygon};
 #[cfg(feature = "genmesh")]
 use obj::IndexTuple;

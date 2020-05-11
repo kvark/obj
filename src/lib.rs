@@ -12,11 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#[cfg(feature = "genmesh")]
-extern crate genmesh;
-
-pub use mtl::{Material, Mtl, MtlError, MtlMissingType};
-pub use obj::{Group, IndexTuple, MtlLibsLoadError, Obj, ObjData, ObjError, ObjMaterial, Object, SimplePolygon};
+pub use self::mtl::{Material, Mtl, MtlError, MtlMissingType};
+pub use self::obj::{Group, IndexTuple, MtlLibsLoadError, Obj, ObjData, ObjError, ObjMaterial, Object, SimplePolygon};
 
 mod mtl;
 mod obj;

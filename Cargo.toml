@@ -1,10 +1,10 @@
 [package]
-
 name = "obj"
-version = "0.9.1"
+version = "0.10.0"
 authors = [
     "Coraline Sherratt <cora.sherratt@gmail.com>",
     "Dzmitry Malyshau <kvarkus@gmail.com>",
+    "Egor Larionov <egor.larionov@gmail.com>",
     "red75prime <red75prim@gmail.com>",
 ]
 
@@ -12,6 +12,7 @@ license = "Apache-2.0"
 description = "A package for loading Wavefront .obj files"
 homepage = "https://github.com/kvark/obj"
 repository = "https://github.com/kvark/obj"
+edition = "2018"
 
 exclude = [
     "test_assets/*",
