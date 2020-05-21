@@ -702,11 +702,12 @@ impl ObjData {
                 }
                 Some("s") => (),
                 Some("l") => (),
-                Some(other) => {
-                    if !other.starts_with('#') {
+                Some(_other) => {
+                    #[cfg(feature = "strict")]
+                    if !_other.starts_with('#') {
                         return Err(ObjError::UnexpectedCommand {
                             line_number: idx,
-                            command: other.to_string(),
+                            command: _other.to_string(),
                         });
                     }
                 }

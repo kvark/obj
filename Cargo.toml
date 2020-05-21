@@ -24,7 +24,8 @@ name = "obj"
 path = "src/lib.rs"
 
 [features]
-default = []
+default = ["strict"]
+strict = []
 
 [dependencies]
 genmesh = { version = "0.6", optional = true }
