@@ -33,6 +33,25 @@ use crate::mtl::{Material, Mtl, MtlError};
 const DEFAULT_OBJECT: &str = "default";
 const DEFAULT_GROUP: &str = "default";
 
+/// Load configuration options.
+#[derive(Copy, Clone, Debug)]
+pub struct LoadConfig {
+    /// Expect a strict spec-compliant `.obj` format.
+    ///
+    /// If this option is set to `true` (default), the parser will return an error when an
+    /// unrecognized `obj` command is found. Otherwise the parser will simply ignore lines starting
+    /// with unrecognized commands.
+    ///
+    /// This is useful for loading `obj` files that have been extended with third-party commands.
+    pub strict: bool,
+}
+
+impl Default for LoadConfig {
+    fn default() -> Self {
+        LoadConfig { strict: true }
+    }
+}
+
 /// A tuple of position, texture and normal indices assigned to each polygon vertex.
 ///
 /// These appear as `/` separated indices in `.obj` files.
@@ -372,14 +391,19 @@ impl Obj {
 }
 
 impl Obj {
-    /// Load an `Obj` file from the given path.
+    /// Load an `Obj` file from the given path with the default load configuration.
     pub fn load(path: impl AsRef<Path>) -> Result<Obj, ObjError> {
-        Obj::load_impl(path.as_ref())
+        Self::load_with_config(path, LoadConfig::default())
     }
 
-    fn load_impl(path: &Path) -> Result<Obj, ObjError> {
+    /// Load an `Obj` file from the given path using a custom load configuration.
+    pub fn load_with_config(path: impl AsRef<Path>, config: LoadConfig) -> Result<Obj, ObjError> {
+        Obj::load_impl(path.as_ref(), config)
+    }
+
+    fn load_impl(path: &Path, config: LoadConfig) -> Result<Obj, ObjError> {
         let f = File::open(path)?;
-        let data = ObjData::load_buf(&f)?;
+        let data = ObjData::load_buf_with_config(&f, config)?;
 
         // unwrap is safe since we've read this file before.
         let path = path.parent().unwrap().to_owned();
@@ -603,6 +627,10 @@ impl ObjData {
     }
 
     pub fn load_buf<R: Read>(input: R) -> Result<Self, ObjError> {
+        Self::load_buf_with_config(input, LoadConfig::default())
+    }
+
+    pub fn load_buf_with_config<R: Read>(input: R, config: LoadConfig) -> Result<Self, ObjError> {
         let input = BufReader::new(input);
         let mut dat = ObjData::default();
         let mut object = Object::new(DEFAULT_OBJECT.to_string());
@@ -702,12 +730,11 @@ impl ObjData {
                 }
                 Some("s") => (),
                 Some("l") => (),
-                Some(_other) => {
-                    #[cfg(feature = "strict")]
-                    if !_other.starts_with('#') {
+                Some(other) => {
+                    if config.strict && !other.starts_with('#') {
                         return Err(ObjError::UnexpectedCommand {
                             line_number: idx,
-                            command: _other.to_string(),
+                            command: other.to_string(),
                         });
                     }
                 }
