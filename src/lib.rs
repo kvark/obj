@@ -13,7 +13,9 @@
 //   limitations under the License.
 
 pub use self::mtl::{Material, Mtl, MtlError, MtlMissingType};
-pub use self::obj::{Group, IndexTuple, MtlLibsLoadError, Obj, ObjData, ObjError, ObjMaterial, Object, SimplePolygon};
+pub use self::obj::{
+    Group, IndexTuple, LoadConfig, MtlLibsLoadError, Obj, ObjData, ObjError, ObjMaterial, Object, SimplePolygon,
+};
 
 mod mtl;
 mod obj;
