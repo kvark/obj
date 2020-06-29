@@ -29,6 +29,7 @@ use std::{
 };
 
 use crate::mtl::{Material, Mtl, MtlError};
+use std::io::BufWriter;
 
 const DEFAULT_OBJECT: &str = "default";
 const DEFAULT_GROUP: &str = "default";
@@ -489,8 +490,8 @@ impl ObjData {
     }
 
     fn save_impl(&self, path: &Path) -> Result<(), ObjError> {
-        let mut f = File::create(path)?;
-        self.write_to_buf(&mut f)?;
+        let f = File::create(path)?;
+        self.write_to_buf(&mut BufWriter::new(f))?;
 
         // unwrap is safe because we created the file above.
         let path = path.parent().unwrap();
