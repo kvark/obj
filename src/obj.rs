@@ -189,11 +189,9 @@ impl fmt::Display for ObjError {
                 "mtllib command issued, but no name was specified. (line: {})",
                 line_number
             ),
-            ObjError::ZeroVertexNumber { line_number } => write!(
-                f,
-                "Zero vertex numbers are invalid. (line: {})",
-                line_number
-            ),
+            ObjError::ZeroVertexNumber { line_number } => {
+                write!(f, "Zero vertex numbers are invalid. (line: {})", line_number)
+            }
             #[cfg(feature = "genmesh")]
             ObjError::GenMeshWrongNumberOfVertsInPolygon { vert_count } => write!(
                 f,
@@ -766,5 +764,21 @@ impl ObjData {
 
         dat.objects.push(object);
         Ok(dat)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Test that given zero vertex numbers, the loader throws an error instead of crashing.
+    #[test]
+    fn load_error_on_zero_vertex_numbers() {
+        let test = b"v 0 1 2\nv 3 4 5\nf 0 1 2";
+        let mut reader = BufReader::new(&test[..]);
+        assert!(matches!(
+            ObjData::load_buf(&mut reader),
+            Err(ObjError::ZeroVertexNumber { line_number: 2 })
+        ));
     }
 }
