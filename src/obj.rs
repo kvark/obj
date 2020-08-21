@@ -143,6 +143,12 @@ pub enum ObjError {
     MissingMTLName {
         line_number: usize,
     },
+    /// Vertices are referenced using positive 1-based indices or negative relative indices.
+    ///
+    /// Zero indices are invalid.
+    ZeroVertexNumber {
+        line_number: usize,
+    },
     /// [`genmesh::Polygon`] only supports triangles and squares.
     #[cfg(feature = "genmesh")]
     GenMeshWrongNumberOfVertsInPolygon {
@@ -181,6 +187,11 @@ impl fmt::Display for ObjError {
             ObjError::MissingMTLName { line_number } => write!(
                 f,
                 "mtllib command issued, but no name was specified. (line: {})",
+                line_number
+            ),
+            ObjError::ZeroVertexNumber { line_number } => write!(
+                f,
+                "Zero vertex numbers are invalid. (line: {})",
                 line_number
             ),
             #[cfg(feature = "genmesh")]
@@ -374,11 +385,16 @@ pub struct Obj {
     pub path: PathBuf,
 }
 
-fn normalize(idx: isize, len: usize) -> usize {
+/// Convert absolute 1-based vertex numbers or relative negative vertex numbers into 0-based index.
+///
+/// If the given index is 0, then None is returned.
+fn normalize(idx: isize, len: usize) -> Option<usize> {
     if idx < 0 {
-        (len as isize + idx) as usize
+        Some((len as isize + idx) as usize)
+    } else if idx > 0 {
+        Some(idx as usize - 1)
     } else {
-        idx as usize - 1
+        None
     }
 }
 
@@ -604,9 +620,10 @@ impl ObjData {
 
         match (p, t, n) {
             (Some(p), t, n) => Ok(IndexTuple(
-                normalize(p, self.position.len()),
-                t.map(|t| normalize(t, self.texture.len())),
-                n.map(|n| normalize(n, self.normal.len())),
+                normalize(p, self.position.len()).ok_or(ObjError::ZeroVertexNumber { line_number })?,
+                // Zero indices are silently ignored for tangent and normal indices.
+                t.map(|t| normalize(t, self.texture.len())).flatten(),
+                n.map(|n| normalize(n, self.normal.len())).flatten(),
             )),
             _ => Err(ObjError::MalformedFaceGroup {
                 line_number,
