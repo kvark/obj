@@ -323,6 +323,11 @@ impl Mtl {
                         m.map_ks = Some(parser.into_string()?);
                     }
                 }
+                Some("map_Ns") => {
+                    if let Some(ref mut m) = material {
+                        m.map_ns = Some(parser.into_string()?);
+                    }
+                }
                 Some("map_d") => {
                     if let Some(ref mut m) = material {
                         m.map_d = Some(parser.into_string()?);
