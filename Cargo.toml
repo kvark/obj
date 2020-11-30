@@ -1,6 +1,6 @@
 [package]
 name = "obj"
-version = "0.10.1"
+version = "0.10.2"
 authors = [
     "Coraline Sherratt <cora.sherratt@gmail.com>",
     "Dzmitry Malyshau <kvarkus@gmail.com>",
