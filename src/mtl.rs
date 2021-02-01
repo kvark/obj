@@ -51,6 +51,7 @@ pub struct Material {
     pub map_d: Option<String>,
     pub map_bump: Option<String>,
     pub map_refl: Option<String>,
+    pub map_disp: Option<String>,
 }
 
 impl Material {
@@ -75,6 +76,7 @@ impl Material {
             map_d: None,
             map_bump: None,
             map_refl: None,
+            map_disp: None,
             illum: None,
         }
     }
@@ -343,6 +345,11 @@ impl Mtl {
                         m.map_bump = Some(parser.into_string()?);
                     }
                 }
+                Some("map_disp") | Some("map_Disp") | Some("disp") => {
+                    if let Some(ref mut m) = material {
+                        m.map_disp = Some(parser.into_string()?);
+                    }
+                }
                 Some(other) => {
                     if !other.starts_with('#') {
                         return Err(MtlError::InvalidInstruction(other.to_string()));
@@ -415,6 +422,9 @@ impl Mtl {
             }
             if let Some(map_bump) = &mtl.map_bump {
                 writeln!(out, "bump {}", map_bump)?;
+            }
+            if let Some(map_disp) = &mtl.map_disp {
+                writeln!(out, "disp {}", map_disp)?;
             }
         }
         Ok(())
