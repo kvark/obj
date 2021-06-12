@@ -251,7 +251,7 @@ impl Mtl {
                         parser
                             .0
                             .next()
-                            .ok_or_else(|| MtlError::MissingMaterialName)?
+                            .ok_or(MtlError::MissingMaterialName)?
                             .to_string(),
                     ));
                 }

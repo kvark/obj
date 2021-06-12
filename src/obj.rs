@@ -613,7 +613,7 @@ impl ObjData {
         let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
         let t: Option<isize> = group_split
             .next()
-            .and_then(|idx| if idx != "" { FromStr::from_str(idx).ok() } else { None });
+            .and_then(|idx| if !idx.is_empty() { FromStr::from_str(idx).ok() } else { None });
         let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
 
         match (p, t, n) {
@@ -723,7 +723,7 @@ impl ObjData {
                     // accurate way to do it, but until the parser can be re-worked, this is good-enough, better-than-before solution.
                     let first_word = words
                         .next()
-                        .ok_or_else(|| ObjError::MissingMTLName { line_number: idx })?
+                        .ok_or(ObjError::MissingMTLName { line_number: idx })?
                         .to_string();
                     let name = words.fold(first_word, |mut existing, next| {
                         existing.push(' ');
