@@ -248,11 +248,7 @@ impl Mtl {
                 Some("newmtl") => {
                     self.materials.extend(material.take().map(Arc::new));
                     material = Some(Material::new(
-                        parser
-                            .0
-                            .next()
-                            .ok_or_else(|| MtlError::MissingMaterialName)?
-                            .to_string(),
+                        parser.0.next().ok_or(MtlError::MissingMaterialName)?.to_string(),
                     ));
                 }
                 Some("Ka") => {
