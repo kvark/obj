@@ -611,9 +611,13 @@ impl ObjData {
     fn parse_group(&self, line_number: usize, group: &str) -> Result<IndexTuple, ObjError> {
         let mut group_split = group.split('/');
         let p: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
-        let t: Option<isize> = group_split
-            .next()
-            .and_then(|idx| if !idx.is_empty() { FromStr::from_str(idx).ok() } else { None });
+        let t: Option<isize> = group_split.next().and_then(|idx| {
+            if !idx.is_empty() {
+                FromStr::from_str(idx).ok()
+            } else {
+                None
+            }
+        });
         let n: Option<isize> = group_split.next().and_then(|idx| FromStr::from_str(idx).ok());
 
         match (p, t, n) {
