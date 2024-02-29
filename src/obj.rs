@@ -793,4 +793,14 @@ mod tests {
             Err(ObjError::ZeroVertexNumber { line_number: 2 })
         ));
     }
+
+    /// Test that [`std::fmt::Display`] is implemented correctly for
+    /// [`IndexTuple`].
+    #[test]
+    fn index_tuple_display() {
+        assert_eq!(IndexTuple(0, None, None).to_string(), "1");
+        assert_eq!(IndexTuple(0, Some(0), None).to_string(), "1/1");
+        assert_eq!(IndexTuple(0, Some(0), Some(0)).to_string(), "1/1/1");
+        assert_eq!(IndexTuple(0, None, Some(0)).to_string(), "1//1");
+    }
 }
