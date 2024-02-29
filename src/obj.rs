@@ -77,7 +77,15 @@ impl std::fmt::Display for IndexTuple {
             write!(f, "/{}", idx + 1)?;
         }
         if let Some(idx) = self.2 {
-            write!(f, "/{}", idx + 1)?;
+            if self.1.is_some() {
+                write!(f, "/{}", idx + 1)?;
+            } else {
+                // requires empty texture coordinate index
+                //
+                // reference:
+                // <https://en.wikipedia.org/wiki/Wavefront_.obj_file#Vertex_normal_indices_without_texture_coordinate_indices>
+                write!(f, "//{}", idx + 1)?;
+            }
         }
         Ok(())
     }
