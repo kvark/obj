@@ -720,11 +720,20 @@ impl ObjData {
                     };
                 }
                 Some("g") => {
+                    let current_material = if group.is_some() {
+                        let g = group.as_ref().unwrap();
+                        g.material.clone()
+                    } else {
+                        None
+                    };
+
                     object.groups.extend(group.take());
 
                     if line.len() > 2 {
                         let name = line[2..].trim();
-                        group = Some(Group::new(name.to_string()));
+                        let mut g = Group::new(name.to_string());
+                        g.material = current_material;
+                        group = Some(g);
                     }
                 }
                 Some("mtllib") => {
@@ -747,8 +756,8 @@ impl ObjData {
                 Some("usemtl") => {
                     let mut g = group.unwrap_or_else(|| Group::new(DEFAULT_GROUP.to_string()));
                     // we found a new material that was applied to an existing
-                    // object. It is treated as a new group.
-                    if g.material.is_some() {
+                    // non-empty object. It is treated as a new group.
+                    if g.material.is_some() && !g.polys.is_empty() {
                         object.groups.push(g.clone());
                         g.index += 1;
                         g.polys.clear();
