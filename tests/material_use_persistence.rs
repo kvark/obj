@@ -27,8 +27,9 @@ g group_b
 f 1 4 2
 ";
 
+
 #[test]
-fn material_use_persistence() {
+fn test_material_use_persistence() {
     let mut reader = BufReader::new(SQUARE.as_bytes());
     let obj_data = ObjData::load_buf(&mut reader).unwrap();
 
@@ -44,4 +45,33 @@ fn material_use_persistence() {
             }
         }
     }
+}
+
+static SQUARE_PARTIAL_USEMTL: &str = "
+v 0 0 0
+v 1 1 1
+v 1 0 1
+v 0 1 0
+
+g group_a
+f 1 2 3
+
+usemtl test
+g group_b
+f 1 4 2
+";
+
+#[test]
+fn test_partial_material_use() {
+    let mut reader = BufReader::new(SQUARE_PARTIAL_USEMTL.as_bytes());
+    let obj_data = ObjData::load_buf(&mut reader).unwrap();
+
+    // Verify that the group before the first 'usemtl' statement
+    // does not have a material assigned, while the group after does.
+    let obj = obj_data.objects.first().unwrap();
+    let group_a = obj.groups.first().unwrap();
+    let group_b = obj.groups.last().unwrap();
+
+    assert!(group_a.material.is_none(), "Group A should not have a material assigned.");
+    assert!(group_b.material.is_some(), "Group B should have a material assigned.");
 }
