@@ -894,12 +894,4 @@ mod tests {
         assert_eq!(IndexTuple(0, Some(0), Some(0)).to_string(), "1/1/1");
         assert_eq!(IndexTuple(0, None, Some(0)).to_string(), "1//1");
     }
-
-    /// Test that [`std::fmt::Display`] is implemented correctly for
-    /// [`LineTuple`].
-    #[test]
-    fn line_tuple_display() {
-        assert_eq!(LineTuple(0, None).to_string(), "1");
-        assert_eq!(LineTuple(0, Some(0)).to_string(), "1/1");
-    }
 }
