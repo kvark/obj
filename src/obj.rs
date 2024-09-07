@@ -757,7 +757,7 @@ impl ObjData {
                     let mut g = group.unwrap_or_else(|| Group::new(DEFAULT_GROUP.to_string()));
                     // we found a new material that was applied to an existing
                     // non-empty object. It is treated as a new group.
-                    if g.material.is_some() && !g.polys.is_empty() {
+                    if !g.polys.is_empty() {
                         object.groups.push(g.clone());
                         g.index += 1;
                         g.polys.clear();
