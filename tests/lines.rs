@@ -41,6 +41,19 @@ fn test_load_line() {
     for (a, b) in obj.position.iter().zip(line_square_vbo.iter()) {
         assert_eq!(a, b);
     }
+
+    let object = obj.objects.first().unwrap();
+    let group = object.groups.first().unwrap();
+
+    let expected_lines = vec![Line(vec![
+        LineTuple(0, None),
+        LineTuple(1, None),
+        LineTuple(2, None),
+        LineTuple(3, None),
+        LineTuple(0, None),
+    ])];
+
+    assert_eq!(group.lines, expected_lines)
 }
 
 #[test]
