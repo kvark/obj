@@ -838,12 +838,15 @@ impl ObjData {
                 }
                 Some("usemtl") => {
                     let mut g = group.unwrap_or_else(|| Group::new(DEFAULT_GROUP.to_string()));
+                    let group_has_geometry = !g.polys.is_empty() || !g.lines.is_empty();
+
                     // we found a new material that was applied to an existing
                     // non-empty object. It is treated as a new group.
-                    if !g.polys.is_empty() {
+                    if group_has_geometry {
                         object.groups.push(g.clone());
                         g.index += 1;
                         g.polys.clear();
+                        g.lines.clear();
                     }
                     g.material = words.next().map(|w| ObjMaterial::Ref(w.to_string()));
                     group = Some(g);
