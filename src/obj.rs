@@ -59,11 +59,29 @@ impl Default for LoadConfig {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct IndexTuple(pub usize, pub Option<usize>, pub Option<usize>);
 
-/// A a simple polygon with arbitrary many vertices.
+/// A tuple of position and texture indices assigned to each line vertex.
+///
+/// These appear as `/` separated indices in `.obj` files.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
+pub struct LineTuple(pub usize, pub Option<usize>);
+
+impl From<IndexTuple> for LineTuple {
+    fn from(value: IndexTuple) -> Self {
+        LineTuple(value.0, value.1)
+    }
+}
+
+/// A simple polygon with arbitrary many vertices.
 ///
 /// Each vertex has an associated tuple of `(position, texture, normal)` indices.
 #[derive(Debug, Clone, Hash, PartialEq)]
 pub struct SimplePolygon(pub Vec<IndexTuple>);
+
+/// A line with arbitrary many vertices.
+///
+/// Each vertex has an associated tuple of `(position, texture)` indices. Lines do not support normals.
+#[derive(Debug, Clone, Hash, PartialEq)]
+pub struct Line(pub Vec<LineTuple>);
 
 pub trait WriteToBuf {
     type Error: std::fmt::Display;
@@ -95,6 +113,28 @@ impl WriteToBuf for SimplePolygon {
     type Error = ObjError;
     fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
         write!(out, "f")?;
+        for idx in &self.0 {
+            write!(out, " {}", idx)?;
+        }
+        writeln!(out)?;
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for LineTuple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0 + 1)?;
+        if let Some(idx) = self.1 {
+            write!(f, "/{}", idx + 1)?;
+        }
+        Ok(())
+    }
+}
+
+impl WriteToBuf for Line {
+    type Error = ObjError;
+    fn write_to_buf<W: Write>(&self, out: &mut W) -> Result<(), ObjError> {
+        write!(out, "l")?;
         for idx in &self.0 {
             write!(out, " {}", idx)?;
         }
@@ -157,6 +197,10 @@ pub enum ObjError {
     ZeroVertexNumber {
         line_number: usize,
     },
+    /// Lines do not support normal indexes.
+    LineHasNormalIndex {
+        line_number: usize,
+    },
     /// [`genmesh::Polygon`] only supports triangles and squares.
     #[cfg(feature = "genmesh")]
     GenMeshWrongNumberOfVertsInPolygon {
@@ -199,6 +243,9 @@ impl fmt::Display for ObjError {
             ),
             ObjError::ZeroVertexNumber { line_number } => {
                 write!(f, "Zero vertex numbers are invalid. (line: {})", line_number)
+            }
+            ObjError::LineHasNormalIndex { line_number } => {
+                write!(f, "Lines with normals are invalid. (line: {})", line_number)
             }
             #[cfg(feature = "genmesh")]
             ObjError::GenMeshWrongNumberOfVertsInPolygon { vert_count } => write!(
@@ -314,6 +361,8 @@ pub struct Group {
     pub material: Option<ObjMaterial>,
     /// A list of polygons appearing as `f ...` in the `.obj` file.
     pub polys: Vec<SimplePolygon>,
+    /// A list of lines appearing as `l ...` in the `.obj` file.
+    pub lines: Vec<Line>,
 }
 
 impl Group {
@@ -323,6 +372,7 @@ impl Group {
             index: 0,
             material: None,
             polys: Vec::new(),
+            lines: Vec::new(),
         }
     }
 }
@@ -345,6 +395,10 @@ impl WriteToBuf for Group {
 
         for poly in &self.polys {
             poly.write_to_buf(out)?;
+        }
+
+        for line in &self.lines {
+            line.write_to_buf(out)?;
         }
 
         Ok(())
@@ -654,6 +708,21 @@ impl ObjData {
         Ok(SimplePolygon(ret))
     }
 
+    fn parse_line<'b, I>(&self, line_number: usize, groups: &mut I) -> Result<Line, ObjError>
+    where
+        I: Iterator<Item = &'b str>,
+    {
+        let mut ret = Vec::with_capacity(2);
+        for g in groups {
+            let ituple = self.parse_group(line_number, g)?;
+            if ituple.2.is_some() {
+                return Err(ObjError::LineHasNormalIndex { line_number });
+            }
+            ret.push(ituple.into());
+        }
+        Ok(Line(ret))
+    }
+
     pub fn load_buf<R: Read>(input: R) -> Result<Self, ObjError> {
         Self::load_buf_with_config(input, LoadConfig::default())
     }
@@ -699,6 +768,20 @@ impl ObjData {
                         }
                         Some(mut g) => {
                             g.polys.push(poly);
+                            g
+                        }
+                    });
+                }
+                Some("l") => {
+                    let line = dat.parse_line(idx, &mut words)?;
+                    group = Some(match group {
+                        None => {
+                            let mut g = Group::new(DEFAULT_GROUP.to_string());
+                            g.lines.push(line);
+                            g
+                        }
+                        Some(mut g) => {
+                            g.lines.push(line);
                             g
                         }
                     });
@@ -755,18 +838,20 @@ impl ObjData {
                 }
                 Some("usemtl") => {
                     let mut g = group.unwrap_or_else(|| Group::new(DEFAULT_GROUP.to_string()));
+                    let group_has_geometry = !g.polys.is_empty() || !g.lines.is_empty();
+
                     // we found a new material that was applied to an existing
                     // non-empty object. It is treated as a new group.
-                    if !g.polys.is_empty() {
+                    if group_has_geometry {
                         object.groups.push(g.clone());
                         g.index += 1;
                         g.polys.clear();
+                        g.lines.clear();
                     }
                     g.material = words.next().map(|w| ObjMaterial::Ref(w.to_string()));
                     group = Some(g);
                 }
                 Some("s") => (),
-                Some("l") => (),
                 Some(other) => {
                     if config.strict && !other.starts_with('#') {
                         return Err(ObjError::UnexpectedCommand {
